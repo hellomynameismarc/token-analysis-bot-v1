@@ -67,11 +67,11 @@
 **Description:** Implement webhook, command routing, address validation, and response formatting.
 
 ### Subtasks:
-- [ ] **5.1** Initialize Telegram Bot API webhook handler with `python-telegram-bot` - Complexity: Low
-- [ ] **5.2** Implement `/help` command with usage instructions - Complexity: Low
-- [ ] **5.3** Implement `/stats` command returning usage metrics - Complexity: Medium
-- [ ] **5.4** Implement contract address validation for EVM & Solana - Complexity: Medium
-- [ ] **5.5** Integrate Sentiment Engine to produce formatted reply (emoji, disclaimer) - Complexity: Medium
+- [x] **5.1** Initialize Telegram Bot API webhook handler with `python-telegram-bot` ✅ - Complexity: Low
+- [x] **5.2** Implement `/help` command with usage instructions ✅ - Complexity: Low
+- [x] **5.3** Implement `/stats` command returning usage metrics ✅ - Complexity: Medium
+- [x] **5.4** Implement contract address validation for EVM & Solana ✅ - Complexity: Medium
+- [x] **5.5** Integrate Sentiment Engine to produce formatted reply (emoji, disclaimer) ✅ - Complexity: Medium
 
 **Dependencies:** Tasks 3, 4
 **Estimated Time:** 12 hours
