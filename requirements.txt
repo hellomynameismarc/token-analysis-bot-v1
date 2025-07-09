@@ -8,3 +8,5 @@ black==24.4.0           # Code formatter
 pre-commit==3.7.1       # Git hook manager
 mypy==1.10.0            # Static type checker
 vaderSentiment==3.3.2           # Sentiment analysis 
+pytest-cov>=4.0.0  # For coverage reporting in CI
+locust>=2.0.0  # For load testing (dev only) 
