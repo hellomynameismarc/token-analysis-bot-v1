@@ -7,3 +7,4 @@ flake8==7.0.0           # Linting
 black==24.4.0           # Code formatter
 pre-commit==3.7.1       # Git hook manager
 mypy==1.10.0            # Static type checker 
+vaderSentiment==3.3.2           # Sentiment analysis 

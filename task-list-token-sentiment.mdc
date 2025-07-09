@@ -35,8 +35,8 @@
 **Description:** Implement asynchronous wrappers for Nansen, Twitter, and CoinGecko/CMC APIs with rate-limit handling and caching hooks.
 
 ### Subtasks:
-- [ ] **3.1** Implement Twitter sentiment fetcher (async search + sentiment scoring) - Complexity: High
-- [ ] **3.2** Implement Nansen on-chain smart-money flow fetcher - Complexity: High
+- [x] **3.1** Implement Twitter sentiment fetcher (async search + sentiment scoring) ✅ - Complexity: High
+- [x] **3.2** Implement Nansen on-chain smart-money flow fetcher ✅ - Complexity: High
 - [ ] **3.3** Implement CoinGecko/CMC token metadata fetcher - Complexity: Medium
 - [ ] **3.4** Centralize error handling & retries with exponential backoff - Complexity: Medium
 - [ ] **3.5** Integrate Redis caching layer (5-min TTL) for each API endpoint - Complexity: Medium
