@@ -1,0 +1,63 @@
+site_name: Token Sentiment Bot API
+site_description: API documentation for the Token Sentiment Telegram Bot
+site_author: Token Sentiment Bot Team
+
+# Repository
+repo_name: hellomynameismarc/token-analysis-bot-v1
+repo_url: https://github.com/hellomynameismarc/token-analysis-bot-v1
+
+# Theme
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+
+# Plugins
+plugins:
+  - search
+  - mkdocstrings
+
+# Navigation
+nav:
+  - Home: index.md
+  - API Reference:
+    - Core Modules:
+      - Sentiment Engine: api/sentiment_engine.md
+      - Data Sources: api/data_sources.md
+      - Cache: api/cache.md
+      - Validation: api/validation.md
+      - HTTP Utils: api/http_utils.md
+      - Rate Limiter: api/rate_limiter.md
+    - Bot:
+      - Main Bot: api/bot_main.md
+  - Development:
+    - Testing: development/testing.md
+    - Load Testing: development/load_testing.md
+    - Deployment: development/deployment.md
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg 

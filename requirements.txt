@@ -9,4 +9,7 @@ pre-commit==3.7.1       # Git hook manager
 mypy==1.10.0            # Static type checker
 vaderSentiment==3.3.2           # Sentiment analysis 
 pytest-cov>=4.0.0  # For coverage reporting in CI
+mkdocs>=1.5.0  # For API documentation
+mkdocstrings[python]>=0.24.0  # Python docstring parsing
+mkdocs-material>=9.0.0  # Material theme for MkDocs
 locust>=2.0.0  # For load testing (dev only) 

@@ -31,15 +31,37 @@ The Token Sentiment Bot analyzes cryptocurrency tokens and provides **Bullish/Ne
 ### 🛡️ **Production Ready**
 - **Rate limiting** (2 analyses per minute per user)
 - **Comprehensive error handling** with actionable guidance
-- **Redis caching** for performance optimization
-- **Extensive testing** (76+ tests with 100% coverage)
+- **Hybrid caching** (Redis + in-memory fallback)
+- **Extensive testing** (150+ tests with 77% coverage)
 - **MVP deployment** ready with free hosting options
+- **Load testing** configured with Locust
 
 ### 📈 **Usage Statistics**
 - **Global analytics** via `/stats` command
 - **Per-user tracking** and rate limit management
 - **Performance metrics** and system health monitoring
 - **Network breakdown** and sentiment distribution
+
+## 📋 Project Status
+
+### ✅ **Completed Tasks**
+- **Task 1**: Project Setup & Repository Initialization ✅
+- **Task 2**: Infrastructure & Deployment Foundation ✅
+- **Task 3**: Data Source Wrappers (Twitter, Nansen, CoinGecko) ✅
+- **Task 4**: Sentiment Analysis Engine ✅
+- **Task 5**: Telegram Bot Core ✅
+- **Task 6**: Rate Limiting & Usage Metrics ✅
+- **Task 7**: Testing Suite & QA Automation ✅
+
+### 🚧 **In Progress**
+- **Task 8**: Documentation & Developer Experience (Current)
+- **Task 9**: Deployment & Monitoring
+
+### 📊 **Current Metrics**
+- **Test Coverage**: 77% (150+ tests passing)
+- **Code Quality**: Linting and formatting configured
+- **Load Testing**: Locust configured for 50 concurrent users
+- **CI/CD**: GitHub Actions with coverage reporting
 
 ## 🚀 Quick Start
 
@@ -134,15 +156,21 @@ Token Sentiment Bot/
 ├── core/                   # Core analysis engine
 │   ├── sentiment_engine.py # Main sentiment analysis logic
 │   ├── data_sources.py     # API wrappers for data sources
-│   ├── cache.py           # Redis caching layer
+│   ├── cache.py           # Hybrid caching layer (Redis + in-memory)
 │   ├── validation.py      # Address validation utilities
-│   └── http_utils.py      # HTTP utilities and retry logic
+│   ├── http_utils.py      # HTTP utilities and retry logic
+│   └── rate_limiter.py    # Rate limiting implementation
 ├── tests/                  # Comprehensive test suite
 │   ├── test_sentiment_engine.py
 │   ├── test_data_sources.py
 │   ├── test_validation.py
-│   └── test_bot_integration.py
-└── requirements.txt        # Python dependencies
+│   ├── test_bot_integration.py
+│   ├── test_cache.py
+│   ├── test_http_utils.py
+│   └── test_rate_limit.py
+├── locustfile.py          # Load testing configuration
+├── pyproject.toml         # Project configuration and coverage settings
+└── requirements.txt       # Python dependencies
 ```
 
 ### Data Flow
@@ -169,6 +197,7 @@ COINGECKO_API_KEY=your_coingecko_key
 
 # Optional: Redis (for production scaling)
 REDIS_URL=redis://localhost:6379
+USE_REDIS=true  # Set to false for in-memory only
 ```
 
 ### Analysis Weights
@@ -198,6 +227,9 @@ python -m pytest tests/test_validation.py -v
 
 # Run with coverage
 python -m pytest tests/ --cov=core --cov=bot --cov-report=html
+
+# Run load tests (requires bot to be running)
+locust -f locustfile.py --headless -u 50 -r 10 -H http://localhost:8000
 ```
 
 ## 🚀 Deployment Options
@@ -252,23 +284,28 @@ railway up
 
 ### 🔄 **Caching Strategy**
 
-For MVP, we use **in-memory caching** instead of Redis:
+The bot uses a **hybrid caching approach**:
 
 ```python
-# Fallback to in-memory cache if Redis unavailable
-if not redis_available:
-    use_in_memory_cache = True
+# Automatic fallback: Redis → In-memory → No cache
+if redis_available:
+    use_redis_cache()
+elif memory_available:
+    use_in_memory_cache()
+else:
+    no_caching()
 ```
 
 **Benefits**:
-- ✅ No additional infrastructure costs
-- ✅ Simpler deployment
-- ✅ Works immediately
+- ✅ No additional infrastructure costs for MVP
+- ✅ Automatic fallback if Redis unavailable
+- ✅ Works immediately without setup
+- ✅ Can scale to Redis when needed
 
 **Trade-offs**:
-- ❌ Cache lost on restart
-- ❌ No shared cache across instances
-- ❌ Limited by memory
+- ❌ In-memory cache lost on restart
+- ❌ No shared cache across instances (in-memory mode)
+- ❌ Limited by available memory
 
 ## 📊 Performance
 
@@ -277,6 +314,8 @@ if not redis_available:
 - **Rate Limits**: 2 analyses/minute per user
 - **Cache Hit Ratio**: 80%+ for repeated requests
 - **Error Rate**: <1% target
+- **Test Coverage**: 77% overall (150+ tests)
+- **Load Testing**: Configured for 50 concurrent users
 
 ## 🔒 Security & Compliance
 
@@ -298,14 +337,20 @@ if not redis_available:
 
 ```bash
 # Install development dependencies
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
-# Set up pre-commit hooks
+# Set up pre-commit hooks (if configured)
 pre-commit install
 
 # Run linting
 flake8 core/ bot/ tests/
 black core/ bot/ tests/
+
+# Run tests with coverage
+python -m pytest --cov=core --cov=bot --cov-report=term-missing
+
+# Run load tests
+locust -f locustfile.py --headless -u 10 -r 2 -H http://localhost:8000
 ```
 
 ## 📝 License
@@ -336,6 +381,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Web dashboard** for detailed analytics
 - [ ] **API endpoints** for programmatic access
 - [ ] **AWS production deployment** (when scaling needed)
+- [ ] **Enhanced monitoring** with Prometheus/Grafana
+- [ ] **Database integration** for historical analysis
 
 ---
 

@@ -1,3 +1,23 @@
+"""
+Hybrid Caching Module
+
+Provides a flexible caching system that automatically falls back from Redis
+to in-memory storage, ensuring the application works in any deployment scenario.
+
+Features:
+- Redis caching for production environments
+- In-memory fallback for MVP deployment
+- Automatic TTL management
+- LRU eviction for memory management
+- Thread-safe operations
+- Graceful degradation on Redis failures
+
+Cache Strategy:
+1. Try Redis first (if available)
+2. Fall back to in-memory cache
+3. Continue without caching if both fail
+"""
+
 import os
 import json
 import hashlib
