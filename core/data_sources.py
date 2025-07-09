@@ -1,5 +1,4 @@
 import os
-import asyncio
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
@@ -23,14 +22,16 @@ class Tweet:
 
 
 class TwitterClient:
-    """Asynchronous wrapper around the Twitter v2 API for recent search + sentiment scoring."""
+    """Async wrapper around the Twitter v2 API for recent search + sentiment scoring."""
 
     _BASE_URL = "https://api.twitter.com/2"
 
-    def __init__(self, bearer_token: str | None = None, *, timeout: float = 10.0):
+    def __init__(self, bearer_token: Optional[str] = None, *, timeout: float = 10.0):
         self.bearer_token = bearer_token or os.getenv("TWITTER_BEARER_TOKEN")
         if not self.bearer_token:
-            raise ValueError("Twitter bearer token not provided via arg or TWITTER_BEARER_TOKEN env var.")
+            raise ValueError(
+                "Twitter bearer token not provided via arg or env var."
+            )
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers={"Authorization": f"Bearer {self.bearer_token}"},
@@ -41,13 +42,15 @@ class TwitterClient:
         await self._client.aclose()
 
     # --------------------------- Twitter API ---------------------------
-    async def search_recent_tweets(self, query: str, *, max_results: int = 50) -> List[Tweet]:
+    async def search_recent_tweets(
+        self, query: str, *, max_results: int = 50
+    ) -> List[Tweet]:
         """Return recent tweets matching a query.
 
-        Docs: https://developer.twitter.com/en/docs/twitter-api/tweets/search/api-reference/get-tweets-search-recent
+        Docs: https://developer.twitter.com/en/docs/twitter-api/tweets/search/
         """
         cache_params = {"query": query, "max_results": max_results}
-        
+
         async def fetch_tweets():
             url = f"{self._BASE_URL}/tweets/search/recent"
             params = {
@@ -62,16 +65,20 @@ class TwitterClient:
             tweets_data = []
             for item in payload.get("data", []):
                 metrics = item.get("public_metrics", {})
-                tweets_data.append({
-                    "id": item["id"],
-                    "text": item["text"],
-                    "like_count": metrics.get("like_count", 0),
-                    "retweet_count": metrics.get("retweet_count", 0),
-                    "reply_count": metrics.get("reply_count", 0),
-                })
+                tweets_data.append(
+                    {
+                        "id": item["id"],
+                        "text": item["text"],
+                        "like_count": metrics.get("like_count", 0),
+                        "retweet_count": metrics.get("retweet_count", 0),
+                        "reply_count": metrics.get("reply_count", 0),
+                    }
+                )
             return {"tweets": tweets_data}
-        
-        result = await cached_request("twitter_search", cache_params, fetch_tweets, ttl_seconds=300)
+
+        result = await cached_request(
+            "twitter_search", cache_params, fetch_tweets, ttl_seconds=300
+        )
         tweets = []
         for item in result["tweets"]:
             tweets.append(Tweet(**item))
@@ -83,7 +90,9 @@ class TwitterClient:
         return self._sentiment.polarity_scores(text)["compound"]
 
     def _engagement_weight(self, tweet: Tweet) -> int:
-        return tweet.like_count + tweet.retweet_count + tweet.reply_count + 1  # +1 to avoid 0 weight
+        return (
+            tweet.like_count + tweet.retweet_count + tweet.reply_count + 1
+        )  # +1 to avoid 0 weight
 
     # --------------------- Public High-level Helper --------------------
     async def sentiment_for_token(self, token_symbol: str, *, limit: int = 50) -> dict:
@@ -104,7 +113,9 @@ class TwitterClient:
 
 
 # ------------------------------ Convenience -----------------------------
-async def get_token_sentiment(token_symbol: str, bearer_token: str | None = None) -> dict:
+async def get_token_sentiment(
+    token_symbol: str, bearer_token: Optional[str] = None
+) -> dict:
     """Convenience function to fetch weighted Twitter sentiment for a token."""
     client = TwitterClient(bearer_token)
     try:
@@ -114,8 +125,7 @@ async def get_token_sentiment(token_symbol: str, bearer_token: str | None = None
 
 
 # =============================== NANSEN ==================================
-import json
-from typing import Dict
+
 
 class NansenAPIError(Exception):
     """Raised when Nansen API returns an error response."""
@@ -160,8 +170,12 @@ class NansenClient:
         chain_id      : int  EVM chain id (1 = Ethereum, 56 = BSC…). Defaults to 1.
         window        : str  1h | 6h | 24h | 7d. Defaults to 24h.
         """
-        cache_params = {"address": token_address, "chain_id": chain_id, "window": window}
-        
+        cache_params = {
+            "address": token_address,
+            "chain_id": chain_id,
+            "window": window,
+        }
+
         async def fetch_flows():
             url = f"{self._BASE_URL}/smart-money/flows"
             params = {
@@ -176,10 +190,17 @@ class NansenClient:
             return {
                 "inflow_usd": float(data.get("inflow_usd", 0)),
                 "outflow_usd": float(data.get("outflow_usd", 0)),
-                "netflow_usd": float(data.get("netflow_usd", data.get("inflow_usd", 0) - data.get("outflow_usd", 0))),
+                "netflow_usd": float(
+                    data.get(
+                        "netflow_usd",
+                        data.get("inflow_usd", 0) - data.get("outflow_usd", 0),
+                    )
+                ),
             }
-        
-        return await cached_request("nansen_flows", cache_params, fetch_flows, ttl_seconds=300)
+
+        return await cached_request(
+            "nansen_flows", cache_params, fetch_flows, ttl_seconds=300
+        )
 
     async def netflow_score(
         self, token_address: str, *, chain_id: int = 1, window: str = "24h"
@@ -211,7 +232,7 @@ class NansenClient:
         Example response: {"address": "0x...", "chain_id": 1, "holder_count": 12345}
         """
         cache_params = {"address": token_address, "chain_id": chain_id}
-        
+
         async def fetch_holders():
             url = f"{self._BASE_URL}/token/holders"
             params = {"address": token_address, "chain_id": chain_id}
@@ -220,8 +241,10 @@ class NansenClient:
                 raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
             data = r.json()
             return {"holder_count": int(data.get("holder_count", 0))}
-        
-        result = await cached_request("nansen_holders", cache_params, fetch_holders, ttl_seconds=300)
+
+        result = await cached_request(
+            "nansen_holders", cache_params, fetch_holders, ttl_seconds=300
+        )
         return result["holder_count"]
 
 
@@ -236,7 +259,9 @@ async def get_nansen_netflow_score(
         await client.close()
 
 
-async def get_token_holder_count(token_address: str, *, chain_id: int = 1, api_key: Optional[str] = None) -> int:
+async def get_token_holder_count(
+    token_address: str, *, chain_id: int = 1, api_key: Optional[str] = None
+) -> int:
     """Convenience helper to fetch holder count via Nansen Token God Mode."""
     client = NansenClient(api_key)
     try:
@@ -253,7 +278,7 @@ class CoinMarketCapAPIError(Exception):
 class CoinMarketCapClient:
     """Simple async wrapper for CoinMarketCap quotes endpoint.
 
-    Docs: https://coinmarketcap.com/api/documentation/v1/#operation/getV1CryptocurrencyQuotesLatest
+    Docs: https://coinmarketcap.com/api/documentation/v1/
     """
 
     _BASE_URL = "https://pro-api.coinmarketcap.com/v1"
@@ -273,7 +298,7 @@ class CoinMarketCapClient:
     async def token_quote(self, symbol: str) -> Dict[str, float]:
         """Return market-cap, 24h volume (USD), and price for a token symbol."""
         cache_params = {"symbol": symbol.upper()}
-        
+
         async def fetch_quote():
             url = f"{self._BASE_URL}/cryptocurrency/quotes/latest"
             params = {"symbol": symbol.upper(), "convert": "USD"}
@@ -290,11 +315,15 @@ class CoinMarketCapClient:
                 "volume_24h_usd": float(quote.get("volume_24h", 0)),
                 "price_usd": float(quote.get("price", 0)),
             }
-        
-        return await cached_request("cmc_quote", cache_params, fetch_quote, ttl_seconds=300)
+
+        return await cached_request(
+            "cmc_quote", cache_params, fetch_quote, ttl_seconds=300
+        )
 
 
-async def get_cmc_metadata(symbol: str, api_key: Optional[str] = None) -> Dict[str, float]:
+async def get_cmc_metadata(
+    symbol: str, api_key: Optional[str] = None
+) -> Dict[str, float]:
     client = CoinMarketCapClient(api_key)
     try:
         return await client.token_quote(symbol)

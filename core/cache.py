@@ -1,7 +1,7 @@
 import os
 import json
 import hashlib
-from typing import Optional, Any
+from typing import Optional
 
 import redis.asyncio as redis
 
@@ -35,7 +35,9 @@ class RedisCache:
         except Exception:
             return None  # Cache miss on any error
 
-    async def set(self, namespace: str, params: dict, value: dict, ttl_seconds: int = 300) -> None:
+    async def set(
+        self, namespace: str, params: dict, value: dict, ttl_seconds: int = 300
+    ) -> None:
         """Cache value with TTL (default 5 minutes)."""
         try:
             key = self._make_key(namespace, params)
@@ -64,13 +66,13 @@ async def cached_request(
 ) -> dict:
     """Helper for cache-or-fetch pattern."""
     cache = get_cache()
-    
+
     # Try cache first
     cached = await cache.get(namespace, params)
     if cached is not None:
         return cached
-    
+
     # Cache miss - fetch fresh data
     result = await fetch_func()
     await cache.set(namespace, params, result, ttl_seconds)
-    return result 
+    return result

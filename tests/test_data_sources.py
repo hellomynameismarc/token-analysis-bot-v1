@@ -1,6 +1,11 @@
 import pytest
 
-from core.data_sources import Tweet, TwitterClient, NansenClient, CoinMarketCapClient
+from core.data_sources import (
+    Tweet,
+    TwitterClient,
+    NansenClient,
+    CoinMarketCapClient,
+)
 
 
 class DummyTwitterClient(TwitterClient):
@@ -11,8 +16,20 @@ class DummyTwitterClient(TwitterClient):
     async def search_recent_tweets(self, query: str, *, max_results: int = 50):  # type: ignore[override]
         # Return two hard-coded tweets for deterministic test
         return [
-            Tweet(id="1", text="Amazing gains on $ABC, to the moon!", like_count=10, retweet_count=2, reply_count=1),
-            Tweet(id="2", text="$ABC is trash, I am selling.", like_count=1, retweet_count=0, reply_count=0),
+            Tweet(
+                id="1",
+                text="Amazing gains on $ABC, to the moon!",
+                like_count=10,
+                retweet_count=2,
+                reply_count=1,
+            ),
+            Tweet(
+                id="2",
+                text="$ABC is trash, I am selling.",
+                like_count=1,
+                retweet_count=0,
+                reply_count=0,
+            ),
         ]
 
 
@@ -23,22 +40,25 @@ async def test_sentiment_for_token():
     assert result["tweet_count"] == 2
     # Score should be between -1 and 1
     assert -1.0 <= result["score"] <= 1.0
-    await client.close() 
+    await client.close()
 
 
 class DummyNansenClient(NansenClient):
     def __init__(self):
         super().__init__(api_key="dummy")
 
-    async def smart_money_netflow(self, token_address: str, *, window: str = "24h"):
+    async def smart_money_netflow(
+        self, token_address: str, *, chain_id: int = 1, window: str = "24h"
+    ):
         return {"inflow_usd": 1500.0, "outflow_usd": 500.0, "netflow_usd": 1000.0}
+
 
 @pytest.mark.asyncio
 async def test_nansen_netflow_score():
     client = DummyNansenClient()
     result = await client.netflow_score("0xToken")
     assert result["score"] == 0.5  # (1500 - 500) / 2000
-    await client.close() 
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -46,11 +66,15 @@ async def test_holder_count():
     class DummyHoldClient(NansenClient):
         def __init__(self):
             super().__init__(api_key="dummy")
-        async def holder_count(self, token_address: str, *, chain_id: int = 1):  # type: ignore[override]
+
+        async def holder_count(
+            self, token_address: str, *, chain_id: int = 1
+        ):  # type: ignore[override]
             return 12345
+
     client = DummyHoldClient()
     assert await client.holder_count("0xToken") == 12345
-    await client.close() 
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -58,9 +82,15 @@ async def test_cmc_metadata():
     class DummyCMC(CoinMarketCapClient):
         def __init__(self):
             super().__init__(api_key="dummy")
+
         async def token_quote(self, symbol: str):  # type: ignore[override]
-            return {"market_cap_usd": 1_000_000, "volume_24h_usd": 50_000, "price_usd": 0.05}
+            return {
+                "market_cap_usd": 1_000_000,
+                "volume_24h_usd": 50_000,
+                "price_usd": 0.05,
+            }
+
     client = DummyCMC()
     meta = await client.token_quote("ABC")
     assert meta["market_cap_usd"] == 1_000_000
-    await client.close() 
+    await client.close()
