@@ -5,6 +5,8 @@ from typing import List, Optional, Dict
 
 import httpx
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from core.http_utils import request_with_retries
+from core.cache import cached_request
 
 
 class TwitterAPIError(Exception):
@@ -44,28 +46,35 @@ class TwitterClient:
 
         Docs: https://developer.twitter.com/en/docs/twitter-api/tweets/search/api-reference/get-tweets-search-recent
         """
-        url = f"{self._BASE_URL}/tweets/search/recent"
-        params = {
-            "query": query,
-            "max_results": min(max_results, 100),
-            "tweet.fields": "public_metrics",
-        }
-        r = await self._client.get(url, params=params)
-        if r.status_code != 200:
-            raise TwitterAPIError(f"Twitter API {r.status_code}: {r.text}")
-        payload = r.json()
-        tweets: List[Tweet] = []
-        for item in payload.get("data", []):
-            metrics = item.get("public_metrics", {})
-            tweets.append(
-                Tweet(
-                    id=item["id"],
-                    text=item["text"],
-                    like_count=metrics.get("like_count", 0),
-                    retweet_count=metrics.get("retweet_count", 0),
-                    reply_count=metrics.get("reply_count", 0),
-                )
-            )
+        cache_params = {"query": query, "max_results": max_results}
+        
+        async def fetch_tweets():
+            url = f"{self._BASE_URL}/tweets/search/recent"
+            params = {
+                "query": query,
+                "max_results": min(max_results, 100),
+                "tweet.fields": "public_metrics",
+            }
+            r = await request_with_retries(self._client, "GET", url, params=params)
+            if r.status_code != 200:
+                raise TwitterAPIError(f"Twitter API {r.status_code}: {r.text}")
+            payload = r.json()
+            tweets_data = []
+            for item in payload.get("data", []):
+                metrics = item.get("public_metrics", {})
+                tweets_data.append({
+                    "id": item["id"],
+                    "text": item["text"],
+                    "like_count": metrics.get("like_count", 0),
+                    "retweet_count": metrics.get("retweet_count", 0),
+                    "reply_count": metrics.get("reply_count", 0),
+                })
+            return {"tweets": tweets_data}
+        
+        result = await cached_request("twitter_search", cache_params, fetch_tweets, ttl_seconds=300)
+        tweets = []
+        for item in result["tweets"]:
+            tweets.append(Tweet(**item))
         return tweets
 
     # ------------------------ Sentiment Utilities ----------------------
@@ -151,21 +160,26 @@ class NansenClient:
         chain_id      : int  EVM chain id (1 = Ethereum, 56 = BSC…). Defaults to 1.
         window        : str  1h | 6h | 24h | 7d. Defaults to 24h.
         """
-        url = f"{self._BASE_URL}/smart-money/flows"
-        params = {
-            "address": token_address,
-            "chain_id": chain_id,
-            "window": window,
-        }
-        r = await self._client.get(url, params=params)
-        if r.status_code != 200:
-            raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
-        data = r.json()
-        return {
-            "inflow_usd": float(data.get("inflow_usd", 0)),
-            "outflow_usd": float(data.get("outflow_usd", 0)),
-            "netflow_usd": float(data.get("netflow_usd", data.get("inflow_usd", 0) - data.get("outflow_usd", 0))),
-        }
+        cache_params = {"address": token_address, "chain_id": chain_id, "window": window}
+        
+        async def fetch_flows():
+            url = f"{self._BASE_URL}/smart-money/flows"
+            params = {
+                "address": token_address,
+                "chain_id": chain_id,
+                "window": window,
+            }
+            r = await request_with_retries(self._client, "GET", url, params=params)
+            if r.status_code != 200:
+                raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
+            data = r.json()
+            return {
+                "inflow_usd": float(data.get("inflow_usd", 0)),
+                "outflow_usd": float(data.get("outflow_usd", 0)),
+                "netflow_usd": float(data.get("netflow_usd", data.get("inflow_usd", 0) - data.get("outflow_usd", 0))),
+            }
+        
+        return await cached_request("nansen_flows", cache_params, fetch_flows, ttl_seconds=300)
 
     async def netflow_score(
         self, token_address: str, *, chain_id: int = 1, window: str = "24h"
@@ -196,13 +210,19 @@ class NansenClient:
         Docs path: /v1/token/holders
         Example response: {"address": "0x...", "chain_id": 1, "holder_count": 12345}
         """
-        url = f"{self._BASE_URL}/token/holders"
-        params = {"address": token_address, "chain_id": chain_id}
-        r = await self._client.get(url, params=params)
-        if r.status_code != 200:
-            raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
-        data = r.json()
-        return int(data.get("holder_count", 0))
+        cache_params = {"address": token_address, "chain_id": chain_id}
+        
+        async def fetch_holders():
+            url = f"{self._BASE_URL}/token/holders"
+            params = {"address": token_address, "chain_id": chain_id}
+            r = await request_with_retries(self._client, "GET", url, params=params)
+            if r.status_code != 200:
+                raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
+            data = r.json()
+            return {"holder_count": int(data.get("holder_count", 0))}
+        
+        result = await cached_request("nansen_holders", cache_params, fetch_holders, ttl_seconds=300)
+        return result["holder_count"]
 
 
 async def get_nansen_netflow_score(
@@ -252,21 +272,26 @@ class CoinMarketCapClient:
 
     async def token_quote(self, symbol: str) -> Dict[str, float]:
         """Return market-cap, 24h volume (USD), and price for a token symbol."""
-        url = f"{self._BASE_URL}/cryptocurrency/quotes/latest"
-        params = {"symbol": symbol.upper(), "convert": "USD"}
-        r = await self._client.get(url, params=params)
-        if r.status_code != 200:
-            raise CoinMarketCapAPIError(f"CMC {r.status_code}: {r.text}")
-        data = r.json()
-        info = data["data"].get(symbol.upper())
-        if not info:
-            raise CoinMarketCapAPIError("Symbol not found in CMC response")
-        quote = info["quote"]["USD"]
-        return {
-            "market_cap_usd": float(quote.get("market_cap", 0)),
-            "volume_24h_usd": float(quote.get("volume_24h", 0)),
-            "price_usd": float(quote.get("price", 0)),
-        }
+        cache_params = {"symbol": symbol.upper()}
+        
+        async def fetch_quote():
+            url = f"{self._BASE_URL}/cryptocurrency/quotes/latest"
+            params = {"symbol": symbol.upper(), "convert": "USD"}
+            r = await request_with_retries(self._client, "GET", url, params=params)
+            if r.status_code != 200:
+                raise CoinMarketCapAPIError(f"CMC {r.status_code}: {r.text}")
+            data = r.json()
+            info = data["data"].get(symbol.upper())
+            if not info:
+                raise CoinMarketCapAPIError("Symbol not found in CMC response")
+            quote = info["quote"]["USD"]
+            return {
+                "market_cap_usd": float(quote.get("market_cap", 0)),
+                "volume_24h_usd": float(quote.get("volume_24h", 0)),
+                "price_usd": float(quote.get("price", 0)),
+            }
+        
+        return await cached_request("cmc_quote", cache_params, fetch_quote, ttl_seconds=300)
 
 
 async def get_cmc_metadata(symbol: str, api_key: Optional[str] = None) -> Dict[str, float]:
