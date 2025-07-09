@@ -30,6 +30,7 @@ from telegram.constants import ParseMode
 
 from core.sentiment_engine import SentimentEngine, SentimentSignal
 from core.validation import validate_token_address, AddressType
+from core.rate_limiter import check_rate_limit, record_request, get_user_rate_limit_stats, get_global_rate_limit_stats
 
 
 # Configure logging
@@ -52,7 +53,7 @@ RATE_LIMIT_MAX_REQUESTS = 2  # 2 analyses per minute per user
 # Global sentiment engine instance
 sentiment_engine: Optional[SentimentEngine] = None
 
-# User rate limiting tracking
+# User rate limiting tracking (legacy - will be replaced by new rate limiter)
 user_request_times = {}
 
 # Bot statistics tracking
@@ -249,25 +250,25 @@ class TokenSentimentBot:
         else:
             uptime_str = f"{uptime_seconds/60:.1f} minutes"
         
-        # Calculate user's recent usage (last hour)
-        user_requests_last_hour = 0
-        if user_id in user_request_times:
-            one_hour_ago = current_time - 3600
-            user_requests_last_hour = len([
-                req_time for req_time in user_request_times[user_id]
-                if req_time > one_hour_ago
-            ])
+        # Get user rate limiting statistics from new rate limiter
+        user_rate_stats = get_user_rate_limit_stats(user_id)
+        global_rate_stats = get_global_rate_limit_stats()
         
-        # Calculate user's current rate limit status
-        user_requests_current_window = 0
-        if user_id in user_request_times:
-            user_requests_current_window = len([
-                req_time for req_time in user_request_times[user_id]
-                if current_time - req_time < RATE_LIMIT_WINDOW
-            ])
+        # Per-user stats
+        user_total_requests = user_rate_stats.get('total_requests', 0)
+        user_recent_requests = user_rate_stats.get('recent_requests', 0)
+        user_remaining = user_rate_stats.get('remaining_requests', 0)
+        user_max = user_rate_stats.get('max_requests', 2)
+        user_window = user_rate_stats.get('window_seconds', 60)
+        user_last_request = user_rate_stats.get('last_request')
         
-        remaining_requests = max(0, RATE_LIMIT_MAX_REQUESTS - user_requests_current_window)
-        
+        # Global stats
+        global_total_users = global_rate_stats.get('total_users', 0)
+        global_total_requests = global_rate_stats.get('total_requests', 0)
+        global_recent_requests = global_rate_stats.get('recent_requests', 0)
+        global_window = global_rate_stats.get('window_seconds', 60)
+        global_last_request = global_rate_stats.get('last_request')
+
         # Calculate average confidence
         avg_confidence = 0
         if bot_stats["average_confidence"]:
@@ -292,39 +293,38 @@ class TokenSentimentBot:
         
         stats_message = (
             "📊 **Token Sentiment Bot Statistics**\n\n"
-            
             "**🤖 Bot Status:**\n"
             f"• Status: ✅ Online ({uptime_str})\n"
             f"• Total Analyses: {bot_stats['total_analyses']:,}\n"
             f"• Unique Users: {len(bot_stats['total_users']):,}\n"
             f"• Success Rate: {success_rate:.1f}%\n\n"
-            
             "**👤 Your Usage:**\n"
-            f"• Requests This Hour: {user_requests_last_hour}\n"
-            f"• Rate Limit: {remaining_requests}/{RATE_LIMIT_MAX_REQUESTS} remaining\n"
-            f"• Window Resets: {int((RATE_LIMIT_WINDOW - (current_time - max(user_request_times.get(user_id, [current_time - RATE_LIMIT_WINDOW])))) if user_request_times.get(user_id) else 0)}s\n\n"
-            
+            f"• Total Requests (all time): {user_total_requests}\n"
+            f"• Requests in Current Window: {user_recent_requests}/{user_max} (last {user_window}s)\n"
+            f"• Remaining in Window: {user_remaining}\n"
+            f"• Last Request: {('<t:' + str(int(user_last_request)) + ':R>') if user_last_request else 'N/A'}\n\n"
+            "**🌐 Global Usage:**\n"
+            f"• Active Users (window): {global_total_users}\n"
+            f"• Total Requests (all time): {global_total_requests}\n"
+            f"• Requests in Current Window: {global_recent_requests} (last {global_window}s)\n"
+            f"• Last Request: {('<t:' + str(int(global_last_request)) + ':R>') if global_last_request else 'N/A'}\n\n"
             "**📈 Performance Metrics:**\n"
             f"• Analyses/Hour: {analyses_per_hour:.1f}\n"
             f"• Avg Confidence: {avg_confidence:.1f}%\n"
             f"• Cache Hit Ratio: {cache_hit_ratio:.1f}%\n"
             f"• Response Time: ~5.2s avg\n\n"
-            
             "**🌐 Network Breakdown:**\n"
             f"• Ethereum: {bot_stats['analyses_by_network']['Ethereum']:,} ({(bot_stats['analyses_by_network']['Ethereum']/max(1, bot_stats['total_analyses']))*100:.1f}%)\n"
             f"• Solana: {bot_stats['analyses_by_network']['Solana']:,} ({(bot_stats['analyses_by_network']['Solana']/max(1, bot_stats['total_analyses']))*100:.1f}%)\n\n"
-            
             "**📊 Sentiment Distribution:**\n"
             f"• 🟢 Bullish: {bot_stats['analyses_by_signal']['Bullish']:,} ({(bot_stats['analyses_by_signal']['Bullish']/max(1, bot_stats['total_analyses']))*100:.1f}%)\n"
             f"• 🟡 Neutral: {bot_stats['analyses_by_signal']['Neutral']:,} ({(bot_stats['analyses_by_signal']['Neutral']/max(1, bot_stats['total_analyses']))*100:.1f}%)\n"
             f"• 🔴 Bearish: {bot_stats['analyses_by_signal']['Bearish']:,} ({(bot_stats['analyses_by_signal']['Bearish']/max(1, bot_stats['total_analyses']))*100:.1f}%)\n\n"
-            
             "**🔧 System Health:**\n"
             f"• Data Sources: ✅ Connected\n"
             f"• Rate Limiting: ✅ Active\n"
             f"• Cache System: ✅ Operational\n"
             f"• Error Rate: {((bot_stats['total_errors']/max(1, total_requests))*100):.2f}%\n\n"
-            
             "**ℹ️ Info:**\n"
             f"• Bot Version: v1.0.0\n"
             f"• Last Reset: <t:{int(bot_stats['start_time'])}:R>\n"
@@ -344,13 +344,22 @@ class TokenSentimentBot:
         user_id = update.effective_user.id
         message_text = update.message.text.strip()
         
-        # Check rate limiting
-        if not self._check_rate_limit(user_id):
+        # Check rate limiting using new rate limiter
+        is_allowed, rate_limit_info = check_rate_limit(user_id)
+        if not is_allowed:
+            reset_time = rate_limit_info.get('reset_time')
+            reset_text = f"<t:{int(reset_time)}:R>" if reset_time else "soon"
+            current_requests = rate_limit_info.get('current_requests', 0)
+            max_requests = rate_limit_info.get('max_requests', 2)
+            window_seconds = rate_limit_info.get('window_seconds', 60)
+
             await update.message.reply_text(
-                "⏱️ **Rate Limit Exceeded**\n\n"
-                "You can perform 2 analyses per minute.\n"
-                "Please wait before sending another request.\n\n"
-                "⚠️ *This helps ensure fair usage for all users.*",
+                "⏱️ **Whoa, slow down! Rate Limit Reached**\n\n"
+                f"You\'ve made **{current_requests}** out of **{max_requests}** allowed analyses in the last {window_seconds} seconds.\n"
+                f"You can try again {reset_text}.\n\n"
+                "💡 *Tip: Use /help to learn more about usage and limits.*\n"
+                "\n"
+                "Thank you for helping keep the bot fast and fair for everyone! 🙏",
                 parse_mode=ParseMode.MARKDOWN
             )
             return
@@ -413,7 +422,7 @@ class TokenSentimentBot:
             )
             
             # Record successful analysis for rate limiting and statistics
-            self._record_request(user_id)
+            record_request(user_id)
             self._record_analysis_stats(user_id, result, address_type)
             
         except Exception as e:

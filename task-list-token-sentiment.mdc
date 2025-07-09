@@ -83,13 +83,13 @@
 **Description:** Enforce 2 analyses per minute per user and track usage statistics.
 
 ### Subtasks:
-- [ ] **6.1** Implement Redis rate-limit keys with sliding window algorithm - Complexity: Medium
-- [ ] **6.2** Add graceful error messaging when rate limit exceeded - Complexity: Low
-- [ ] **6.3** Store per-user & global usage counters for `/stats` - Complexity: Low
+- [x] **6.1** Implement in-memory rate-limit keys with sliding window algorithm ✅ - Complexity: Medium
+- [x] **6.2** Add graceful error messaging when rate limit exceeded ✅ - Complexity: Low
+- [x] **6.3** Store per-user & global usage counters for `/stats` ✅ - Complexity: Low
 
 **Dependencies:** Tasks 2, 5
 **Estimated Time:** 6 hours
-**Files to Create/Modify:** `core/cache.py`, `bot/main.py`, `tests/test_rate_limit.py`
+**Files to Create/Modify:** `core/rate_limiter.py`, `bot/main.py`, `tests/test_rate_limit.py`
 
 ---
 
