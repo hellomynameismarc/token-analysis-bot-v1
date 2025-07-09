@@ -51,11 +51,11 @@
 **Description:** Aggregate pillar data, apply weighting (60/25/15), normalize scores, compute confidence, and map to Bullish/Neutral/Bearish.
 
 ### Subtasks:
-- [ ] **4.1** Define data models using Pydantic for each pillar - Complexity: Medium
-- [ ] **4.2** Implement weighting & normalization logic - Complexity: Medium
-- [ ] **4.3** Implement confidence calculation with data quality downgrade - Complexity: Medium
-- [ ] **4.4** Provide rationale builder producing three-bullet explanation - Complexity: Low
-- [ ] **4.5** Unit tests covering edge cases & no-data scenarios - Complexity: Medium
+- [x] **4.1** Define data models using Pydantic for each pillar ✅ - Complexity: Medium
+- [x] **4.2** Implement weighting & normalization logic ✅ - Complexity: Medium
+- [x] **4.3** Implement confidence calculation with data quality downgrade ✅ - Complexity: Medium
+- [x] **4.4** Provide rationale builder producing three-bullet explanation ✅ - Complexity: Low
+- [x] **4.5** Unit tests covering edge cases & no-data scenarios ✅ - Complexity: Medium
 
 **Dependencies:** Task 3
 **Estimated Time:** 14 hours
