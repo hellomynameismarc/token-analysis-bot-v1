@@ -28,6 +28,7 @@ class AddressType(Enum):
     OPTIMISM = "Optimism"
     AVALANCHE = "Avalanche"
     FANTOM = "Fantom"
+    BASE = "Base"
 
 
 class ValidationError(Exception):

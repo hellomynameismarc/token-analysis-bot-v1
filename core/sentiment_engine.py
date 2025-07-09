@@ -216,8 +216,8 @@ class SentimentAnalysisResult(BaseModel):
 @dataclass
 class WeightingConfig:
     """Configuration for pillar weighting in sentiment analysis."""
-    nansen_weight: float = 0.80      # 80% - on-chain smart money flows
-    twitter_weight: float = 0.05     # 5% - social sentiment  
+    nansen_weight: float = 0.60      # 60% - on-chain smart money flows
+    twitter_weight: float = 0.25     # 25% - social sentiment  
     fundamentals_weight: float = 0.15  # 15% - token fundamentals
     
     @staticmethod
@@ -357,13 +357,24 @@ class SentimentEngine:
             if self.twitter_client:
                 result = await self.twitter_client.sentiment_for_token(token_symbol)
             else:
-                result = await get_token_sentiment(token_symbol)
+                # Try to use the convenience function
+                try:
+                    result = await get_token_sentiment(token_symbol)
+                except ValueError as e:
+                    if "Twitter bearer token not provided" in str(e):
+                        # API key not configured
+                        return None
+                    raise
                 
             return TwitterPillarData(
                 sentiment_score=result['score'],
                 tweet_count=result['tweet_count']
             )
-        except Exception:
+        except Exception as e:
+            # Log the error but don't fail the entire analysis
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to fetch Twitter data for {token_symbol}: {e}")
             return None
     
     async def _fetch_nansen_data(self, token_address: str, chain_id: int) -> Optional[NansenPillarData]:
@@ -380,14 +391,21 @@ class SentimentEngine:
                     token_address, chain_id=chain_id
                 )
             else:
-                netflow_score_data = await get_nansen_netflow_score(
-                    token_address, chain_id=chain_id
-                )
-                flows = {
-                    'inflow_usd': netflow_score_data['inflow_usd'],
-                    'outflow_usd': netflow_score_data['outflow_usd']
-                }
-                holder_count = None  # Would need separate function call
+                # Try to use the convenience function
+                try:
+                    netflow_score_data = await get_nansen_netflow_score(
+                        token_address, chain_id=chain_id
+                    )
+                    flows = {
+                        'inflow_usd': netflow_score_data['inflow_usd'],
+                        'outflow_usd': netflow_score_data['outflow_usd']
+                    }
+                    holder_count = None  # Would need separate function call
+                except ValueError as e:
+                    if "Nansen API key not provided" in str(e):
+                        # API key not configured
+                        return None
+                    raise
                 
             return NansenPillarData(
                 netflow_score=netflow_score_data['score'],
@@ -395,7 +413,11 @@ class SentimentEngine:
                 outflow_usd=flows['outflow_usd'],
                 holder_count=holder_count
             )
-        except Exception:
+        except Exception as e:
+            # Log the error but don't fail the entire analysis
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to fetch Nansen data for {token_address} on chain {chain_id}: {e}")
             return None
     
     async def _fetch_fundamentals_data(self, token_symbol: Optional[str]) -> Optional[FundamentalsPillarData]:
@@ -407,14 +429,25 @@ class SentimentEngine:
             if self.cmc_client:
                 result = await self.cmc_client.token_quote(token_symbol)
             else:
-                result = await get_cmc_metadata(token_symbol)
+                # Try to use the convenience function
+                try:
+                    result = await get_cmc_metadata(token_symbol)
+                except ValueError as e:
+                    if "CoinMarketCap API key not provided" in str(e):
+                        # API key not configured
+                        return None
+                    raise
                 
             return FundamentalsPillarData(
                 market_cap_usd=result['market_cap_usd'],
                 volume_24h_usd=result['volume_24h_usd'],
                 price_usd=result['price_usd']
             )
-        except Exception:
+        except Exception as e:
+            # Log the error but don't fail the entire analysis
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to fetch fundamentals data for {token_symbol}: {e}")
             return None
     
     def _compute_weighted_score(self, 

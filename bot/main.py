@@ -32,7 +32,7 @@ from core.sentiment_engine import SentimentEngine, SentimentSignal
 from core.validation import validate_token_address, AddressType
 from core.rate_limiter import check_rate_limit, record_request, get_user_rate_limit_stats, get_global_rate_limit_stats
 from core.monitoring import init_monitoring, capture_exception, set_user_context, clear_user_context, add_breadcrumb
-from bot.web_server import create_web_server
+# Web server import removed - using polling mode for local development
 
 
 # Configure logging
@@ -180,6 +180,8 @@ class TokenSentimentBot:
             "**🌐 Supported Networks:**\n"
             "• **Ethereum** - 0x followed by 40 hex characters\n"
             "  Example: `0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`\n"
+            "• **Base** - 0x followed by 40 hex characters\n"
+            "  Example: `0x4200000000000000000000000000000000000006`\n"
             "• **Solana** - Base58 address (32-44 characters)\n"
             "  Example: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`\n\n"
             
@@ -388,6 +390,7 @@ class TokenSentimentBot:
                 "❌ **Invalid Token Address**\n\n"
                 "Please send a valid token contract address:\n"
                 "• **Ethereum**: 0x... (42 characters)\n"
+                "• **Base**: 0x... (42 characters)\n"
                 "• **Solana**: Base58 address (32-44 characters)\n\n"
                 "Example: `0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`\n\n"
                 "Type /help for more information.",
@@ -396,6 +399,39 @@ class TokenSentimentBot:
             return
         
         address, address_type = validation_result
+        
+        # For EVM addresses, ask user to specify which chain they want to analyze
+        if address_type in [AddressType.ETHEREUM, AddressType.BASE, AddressType.POLYGON, AddressType.ARBITRUM, AddressType.OPTIMISM, AddressType.AVALANCHE, AddressType.FANTOM, AddressType.BSC]:
+            # Check if this looks like a Base address (common Base tokens)
+            if address.lower() in [
+                "0x4200000000000000000000000000000000000006",  # WETH on Base
+                "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",  # USDC on Base
+                "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",  # Coinbase Wrapped Staked ETH
+            ]:
+                address_type = AddressType.BASE
+                # Update processing message to show Base chain
+                await update.message.reply_text(
+                    "🔍 **Base Chain Detected**\n\n"
+                    f"Address: `{address}`\n"
+                    "Network: Base\n\n"
+                    "This appears to be a Base chain token. Proceeding with Base chain analysis...",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            else:
+                # Ask user to specify chain for ambiguous EVM addresses
+                await update.message.reply_text(
+                    "🔍 **Multiple Chain Support Detected**\n\n"
+                    f"Address: `{address}`\n\n"
+                    "This address could exist on multiple chains. Please specify:\n\n"
+                    "• **Base** - Reply with 'Base' or 'base'\n"
+                    "• **Ethereum** - Reply with 'ETH' or 'ethereum'\n"
+                    "• **Polygon** - Reply with 'POLYGON' or 'polygon'\n"
+                    "• **Arbitrum** - Reply with 'ARB' or 'arbitrum'\n"
+                    "• **Optimism** - Reply with 'OP' or 'optimism'\n\n"
+                    "Or just send the address again and I'll default to Base chain.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
         
         # Show processing message
         processing_msg = await update.message.reply_text(
@@ -523,6 +559,7 @@ class TokenSentimentBot:
             AddressType.OPTIMISM: 10,   # Optimism
             AddressType.AVALANCHE: 43114, # Avalanche
             AddressType.FANTOM: 250,    # Fantom
+            AddressType.BASE: 8453,     # Base
         }
         return chain_mapping.get(address_type, 1)  # Default to Ethereum
     
@@ -712,9 +749,9 @@ class TokenSentimentBot:
         )
 
 
-# Webhook application setup for serverless deployment
+# Application setup for bot
 async def create_application():
-    """Create and configure the bot application for webhook mode."""
+    """Create and configure the bot application."""
     if not BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
     
@@ -734,32 +771,7 @@ async def main():
         # Create and start bot
         bot = await create_application()
         
-        if WEBHOOK_URL and bot.application:
-            # Webhook mode for production with health checks
-            logger.info("Starting in webhook mode with health checks...")
-            
-            # Create custom web server with health checks
-            web_server = await create_web_server(bot.application, WEBHOOK_PATH)
-            
-            # Set webhook URL
-            await bot.application.bot.set_webhook(
-                url=f"{WEBHOOK_URL}{WEBHOOK_PATH}",
-                allowed_updates=['message', 'callback_query']
-            )
-            
-            # Start web server
-            await web_server.start(port=WEBHOOK_PORT)
-            
-            # Keep the server running
-            try:
-                await asyncio.Future()  # Run forever
-            except KeyboardInterrupt:
-                logger.info("Shutting down...")
-            finally:
-                await web_server.stop()
-                if bot:
-                    await bot.stop()
-        elif bot.application:
+        if bot.application:
             # Polling mode for development
             logger.info("Starting in polling mode...")
             await bot.application.run_polling(
