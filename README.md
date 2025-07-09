@@ -32,8 +32,8 @@ The Token Sentiment Bot analyzes cryptocurrency tokens and provides **Bullish/Ne
 - **Rate limiting** (2 analyses per minute per user)
 - **Comprehensive error handling** with actionable guidance
 - **Redis caching** for performance optimization
-- **AWS deployment** ready with Terraform infrastructure
 - **Extensive testing** (76+ tests with 100% coverage)
+- **MVP deployment** ready with free hosting options
 
 ### 📈 **Usage Statistics**
 - **Global analytics** via `/stats` command
@@ -45,7 +45,6 @@ The Token Sentiment Bot analyzes cryptocurrency tokens and provides **Bullish/Ne
 
 ### Prerequisites
 - Python 3.9+
-- Redis server
 - Telegram Bot Token
 - API keys for data sources (Nansen, Twitter, CoinGecko)
 
@@ -143,8 +142,6 @@ Token Sentiment Bot/
 │   ├── test_data_sources.py
 │   ├── test_validation.py
 │   └── test_bot_integration.py
-├── infra/                  # Infrastructure as Code
-│   └── terraform/         # AWS deployment configuration
 └── requirements.txt        # Python dependencies
 ```
 
@@ -154,7 +151,7 @@ Token Sentiment Bot/
 2. **Data Collection** → Parallel API calls to Nansen, Twitter, CoinGecko
 3. **Analysis** → Weighted sentiment calculation with confidence scoring
 4. **Response** → Formatted output with rationale and disclaimers
-5. **Caching** → Redis storage for performance optimization
+5. **Caching** → In-memory storage for performance optimization
 
 ## 🔧 Configuration
 
@@ -163,19 +160,15 @@ Token Sentiment Bot/
 ```bash
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=your_bot_token
-WEBHOOK_URL=https://your-domain.com/webhook
+WEBHOOK_URL=https://your-domain.com/webhook  # Optional for MVP
 
 # Data Sources
 NANSEN_API_KEY=your_nansen_key
 TWITTER_BEARER_TOKEN=your_twitter_token
 COINGECKO_API_KEY=your_coingecko_key
 
-# Redis
+# Optional: Redis (for production scaling)
 REDIS_URL=redis://localhost:6379
-
-# AWS (for production)
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
 ```
 
 ### Analysis Weights
@@ -207,41 +200,80 @@ python -m pytest tests/test_validation.py -v
 python -m pytest tests/ --cov=core --cov=bot --cov-report=html
 ```
 
-## 🚀 Deployment
+## 🚀 Deployment Options
 
-### Local Development
+### 🆓 **Free MVP Options**
 
+#### Option 1: Local Development (Free)
 ```bash
-# Start Redis
-redis-server
-
-# Run bot in polling mode
+# Run bot in polling mode (no webhook needed)
 python -m bot.main
 ```
+**Cost**: $0/month
+**Pros**: No setup, immediate testing
+**Cons**: Requires your computer to be running
 
-### Production (AWS)
-
-1. **Deploy infrastructure**
+#### Option 2: Railway.app (Free Tier)
 ```bash
-cd infra/terraform
-terraform init
-terraform apply
+# Deploy to Railway (free tier: 500 hours/month)
+railway login
+railway init
+railway up
+```
+**Cost**: $0/month (500 hours free)
+**Pros**: Easy deployment, automatic HTTPS
+**Cons**: Limited hours, may sleep after inactivity
+
+#### Option 3: Render.com (Free Tier)
+```bash
+# Deploy to Render (free tier: 750 hours/month)
+# Connect GitHub repo and deploy automatically
+```
+**Cost**: $0/month (750 hours free)
+**Pros**: Easy setup, good documentation
+**Cons**: Sleeps after 15 minutes of inactivity
+
+#### Option 4: Heroku (Free Tier Discontinued)
+**Note**: Heroku no longer offers free tier, but paid plans start at $7/month
+
+### 💰 **Paid Production Options**
+
+#### Option 1: Railway.app (Paid)
+- **Starter**: $5/month (unlimited hours)
+- **Pro**: $20/month (better performance)
+
+#### Option 2: Render.com (Paid)
+- **Starter**: $7/month (always on)
+- **Standard**: $25/month (better performance)
+
+#### Option 3: DigitalOcean App Platform
+- **Basic**: $5/month (512MB RAM)
+- **Professional**: $12/month (1GB RAM)
+
+### 🔄 **Caching Strategy**
+
+For MVP, we use **in-memory caching** instead of Redis:
+
+```python
+# Fallback to in-memory cache if Redis unavailable
+if not redis_available:
+    use_in_memory_cache = True
 ```
 
-2. **Deploy bot container**
-```bash
-# Build and push Docker image
-docker build -t token-sentiment-bot .
-docker push your-registry/token-sentiment-bot:latest
+**Benefits**:
+- ✅ No additional infrastructure costs
+- ✅ Simpler deployment
+- ✅ Works immediately
 
-# Deploy to ECS/Fargate
-./deploy.sh
-```
+**Trade-offs**:
+- ❌ Cache lost on restart
+- ❌ No shared cache across instances
+- ❌ Limited by memory
 
 ## 📊 Performance
 
 - **Response Time**: <7 seconds median
-- **Uptime**: 99%+ target
+- **Uptime**: 99%+ target (depends on hosting)
 - **Rate Limits**: 2 analyses/minute per user
 - **Cache Hit Ratio**: 80%+ for repeated requests
 - **Error Rate**: <1% target
@@ -303,6 +335,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Custom analysis weights** per user
 - [ ] **Web dashboard** for detailed analytics
 - [ ] **API endpoints** for programmatic access
+- [ ] **AWS production deployment** (when scaling needed)
 
 ---
 

@@ -16,18 +16,18 @@
 
 ---
 
-## Task 2: Infrastructure & Deployment Foundation - Complexity: Medium
-**Description:** Prepare serverless container deployment, Redis cache, and environment configuration.
+## Task 2: Infrastructure & Deployment Foundation - Complexity: Low
+**Description:** Prepare MVP deployment with free hosting options and in-memory caching.
 
 ### Subtasks:
 - [x] **2.1** Write `Dockerfile` for stateless Python service ✅ - Complexity: Low
-- [x] **2.2** Provision AWS resources (Fargate task definition, ECS cluster, IAM roles) via IaC (Terraform/CDK) ✅ - Complexity: High
-- [x] **2.3** Set up managed Redis (AWS ElastiCache) and parameterize connection strings via environment variables ✅ - Complexity: Medium
-- [x] **2.4** Create `deploy.sh` or GitHub Actions workflow for CI/CD pipeline ✅ - Complexity: Medium
+- [x] **2.2** Create free deployment guides (Railway, Render, local) ✅ - Complexity: Low
+- [x] **2.3** Implement in-memory caching fallback for Redis ✅ - Complexity: Medium
+- [x] **2.4** Create environment configuration examples ✅ - Complexity: Low
 
 **Dependencies:** Task 1
-**Estimated Time:** 12 hours
-**Files to Create/Modify:** `Dockerfile`, `infra/terraform/*`, `.github/workflows/deploy.yml`, `README.md`
+**Estimated Time:** 6 hours
+**Files to Create/Modify:** `Dockerfile`, `DEPLOYMENT.md`, `env.example`, `core/cache.py`, `README.md`
 
 ---
 
@@ -122,17 +122,17 @@
 
 ---
 
-## Task 9: Deployment & Monitoring - Complexity: Medium
-**Description:** Deploy production container, set up uptime monitoring, and alerting.
+## Task 9: Deployment & Monitoring - Complexity: Low
+**Description:** Deploy to free hosting and set up basic monitoring.
 
 ### Subtasks:
-- [ ] **9.1** Deploy container image to AWS Fargate with environment variables - Complexity: Medium
-- [ ] **9.2** Configure health checks and auto-scaling policies - Complexity: Medium
-- [ ] **9.3** Integrate monitoring (CloudWatch or Prometheus) & 99% uptime alerts - Complexity: Medium
+- [ ] **9.1** Deploy to Railway/Render free tier with environment variables - Complexity: Low
+- [ ] **9.2** Set up basic health checks and uptime monitoring - Complexity: Low
+- [ ] **9.3** Configure free monitoring tools (UptimeRobot, Sentry) - Complexity: Low
 
 **Dependencies:** Tasks 2, 5, 6
-**Estimated Time:** 8 hours
-**Files to Create/Modify:** `infra/terraform/*`, `deploy/*`, `README.md`
+**Estimated Time:** 4 hours
+**Files to Create/Modify:** `DEPLOYMENT.md`, `README.md`
 
 ---
 
@@ -147,12 +147,13 @@
 8. Task 8
 9. Task 9
 
-## Total Estimated Time: 78 hours
+## Total Estimated Time: 68 hours
 
 ## Notes
 - Parallelize API calls within Sentiment Engine to meet <7s median response requirement
-- Ensure Redis caching to reduce API costs
+- Use in-memory caching for MVP to avoid infrastructure costs
 - Weight percentages should be configurable via `config.yaml` for future tuning
 - Include "Not financial advice" disclaimer in every user-visible response
 - Handle missing pillar data by lowering confidence and flagging low data quality
-- Secure API keys via environment variables and AWS Secrets Manager
+- Secure API keys via environment variables
+- Start with free hosting (Railway/Render) before scaling to paid infrastructure
