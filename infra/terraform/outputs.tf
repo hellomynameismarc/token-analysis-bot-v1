@@ -11,4 +11,9 @@ output "ecs_task_definition_arn" {
 output "ecs_task_execution_role_arn" {
   value       = aws_iam_role.ecs_task_execution_role.arn
   description = "ARN of the task execution role"
+}
+
+output "redis_endpoint" {
+  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
+  description = "Primary endpoint for Redis"
 } 

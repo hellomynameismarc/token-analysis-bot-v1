@@ -26,4 +26,16 @@ variable "memory" {
   description = "Fargate task memory in MiB."
   type        = number
   default     = 512
+}
+
+variable "redis_node_type" {
+  description = "ElastiCache Redis node instance class"
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "redis_num_cache_nodes" {
+  description = "Number of cache nodes in the replication group"
+  type        = number
+  default     = 1
 } 

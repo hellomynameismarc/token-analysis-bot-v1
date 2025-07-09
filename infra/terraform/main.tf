@@ -68,6 +68,42 @@ resource "aws_ecs_task_definition" "this" {
           awslogs-stream-prefix = "bot"
         }
       }
+
+      environment = [
+        {
+          name  = "REDIS_HOST"
+          value = aws_elasticache_replication_group.redis.primary_endpoint_address
+        },
+        {
+          name  = "REDIS_PORT"
+          value = "6379"
+        }
+      ]
     }
   ])
+}
+
+# --- Redis infrastructure ---
+
+data "aws_default_vpc" "default" {}
+
+data "aws_subnet_ids" "default" {
+  vpc_id = data.aws_default_vpc.default.id
+}
+
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "${var.project_name}-redis-subnet-group"
+  subnet_ids = data.aws_subnet_ids.default.ids
+}
+
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id          = "${var.project_name}-redis"
+  replication_group_description = "Redis cache for ${var.project_name}"
+  engine                        = "redis"
+  engine_version                = "7.0"
+  node_type                     = var.redis_node_type
+  number_cache_clusters         = var.redis_num_cache_nodes
+  automatic_failover_enabled    = false
+  subnet_group_name             = aws_elasticache_subnet_group.redis.id
+  port                          = 6379
 } 

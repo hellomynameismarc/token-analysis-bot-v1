@@ -22,7 +22,7 @@
 ### Subtasks:
 - [x] **2.1** Write `Dockerfile` for stateless Python service ✅ - Complexity: Low
 - [x] **2.2** Provision AWS resources (Fargate task definition, ECS cluster, IAM roles) via IaC (Terraform/CDK) ✅ - Complexity: High
-- [ ] **2.3** Set up managed Redis (AWS ElastiCache) and parameterize connection strings via environment variables - Complexity: Medium
+- [x] **2.3** Set up managed Redis (AWS ElastiCache) and parameterize connection strings via environment variables ✅ - Complexity: Medium
 - [ ] **2.4** Create `deploy.sh` or GitHub Actions workflow for CI/CD pipeline - Complexity: Medium
 
 **Dependencies:** Task 1
