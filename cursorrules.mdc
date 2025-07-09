@@ -1,0 +1,62 @@
+# Cursor Rules Guide
+
+This document outlines best practices for creating and maintaining a `cursorrules` file to guide Cursor AI in this repository.
+
+## 1. Purpose
+The `cursorrules` file provides high-level policies that keep the AI assistant aligned with team conventions, tooling requirements, and security standards.
+
+## 2. Recommended Format
+Use **YAML** for structured, machine-readable rules, optionally preceded by Markdown commentary for human context.
+
+## 3. Suggested Sections
+1. **metadata** – project name, primary language, owners
+2. **code_quality** – formatter, linter, type-checker preferences
+3. **tooling** – required CLI tools & non-interactive flags
+4. **task_management** – branching strategy, commit style, PR rules
+5. **security** – file globs that must never be committed (e.g., `.env`, `*.pem`)
+6. **testing** – mandatory test commands to run before merge
+7. **communication** – tone guidelines, PR templates, checklist keywords
+
+## 4. Example Template (YAML)
+```yaml
+# cursorrules
+metadata:
+  project: Token Sentiment Telegram Bot
+  language: python
+  owners: ["@team-lead", "@infra"]
+code_quality:
+  formatter: black
+  lint: flake8
+  typing: mypy
+tooling:
+  python_version: "3.11"
+  package_manager: pip
+task_management:
+  branch_prefixes: ["feat/", "fix/", "docs/"]
+  commit_style: conventional
+security:
+  denylist_globs:
+    - "*.pem"
+    - "*.key"
+    - ".env*"
+testing:
+  commands:
+    - pytest
+    - flake8
+communication:
+  pr_template: .github/PULL_REQUEST_TEMPLATE.md
+```
+
+## 5. Best Practices
+- Keep the file concise (≤ 200 lines) and well-commented.
+- Document the rationale for each rule inline.
+- Store only patterns—never actual secrets.
+- Review & update after significant tech-stack or policy changes.
+- Enforce key rules via CI workflows for consistency.
+
+---
+Feel free to adapt this template to the evolving needs of the project.
+description:
+globs:
+alwaysApply: false
+---

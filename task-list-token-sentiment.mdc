@@ -1,0 +1,162 @@
+# Task List: Token Sentiment Telegram Bot
+
+## Task 1: Project Setup & Repository Initialization - Complexity: Medium
+**Description:** Establish the foundational project structure, dependency management, and development environment.
+
+### Subtasks:
+- [ ] **1.1** Create Python virtual environment & initialize Git repository - Complexity: Low
+- [ ] **1.2** Define project directory layout (`bot/`, `core/`, `tests/`) - Complexity: Low
+- [ ] **1.3** Create `requirements.txt` with pinned dependencies (`python-telegram-bot`, `httpx`, `redis`, `pydantic`, `pytest`, `flake8`, etc.) - Complexity: Low
+- [ ] **1.4** Configure pre-commit hooks (black, flake8) - Complexity: Low
+- [ ] **1.5** Set up CI pipeline (GitHub Actions) running `pytest` & `flake8` on push - Complexity: Medium
+
+**Dependencies:** None
+**Estimated Time:** 6 hours
+**Files to Create/Modify:** `.gitignore`, `requirements.txt`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, directory scaffolding
+
+---
+
+## Task 2: Infrastructure & Deployment Foundation - Complexity: Medium
+**Description:** Prepare serverless container deployment, Redis cache, and environment configuration.
+
+### Subtasks:
+- [ ] **2.1** Write `Dockerfile` for stateless Python service - Complexity: Low
+- [ ] **2.2** Provision AWS resources (Fargate task definition, ECS cluster, IAM roles) via IaC (Terraform/CDK) - Complexity: High
+- [ ] **2.3** Set up managed Redis (AWS ElastiCache) and parameterize connection strings via environment variables - Complexity: Medium
+- [ ] **2.4** Create `deploy.sh` or GitHub Actions workflow for CI/CD pipeline - Complexity: Medium
+
+**Dependencies:** Task 1
+**Estimated Time:** 12 hours
+**Files to Create/Modify:** `Dockerfile`, `infra/terraform/*`, `.github/workflows/deploy.yml`, `README.md`
+
+---
+
+## Task 3: Data Source Wrappers (`core/data_sources.py`) - Complexity: High
+**Description:** Implement asynchronous wrappers for Nansen, Twitter, and CoinGecko/CMC APIs with rate-limit handling and caching hooks.
+
+### Subtasks:
+- [ ] **3.1** Implement Twitter sentiment fetcher (async search + sentiment scoring) - Complexity: High
+- [ ] **3.2** Implement Nansen on-chain smart-money flow fetcher - Complexity: High
+- [ ] **3.3** Implement CoinGecko/CMC token metadata fetcher - Complexity: Medium
+- [ ] **3.4** Centralize error handling & retries with exponential backoff - Complexity: Medium
+- [ ] **3.5** Integrate Redis caching layer (5-min TTL) for each API endpoint - Complexity: Medium
+
+**Dependencies:** Tasks 1, 2
+**Estimated Time:** 16 hours
+**Files to Create/Modify:** `core/data_sources.py`, `core/cache.py`, `tests/test_data_sources.py`
+
+---
+
+## Task 4: Sentiment Analysis Engine (`core/sentiment_engine.py`) - Complexity: High
+**Description:** Aggregate pillar data, apply weighting (60/25/15), normalize scores, compute confidence, and map to Bullish/Neutral/Bearish.
+
+### Subtasks:
+- [ ] **4.1** Define data models using Pydantic for each pillar - Complexity: Medium
+- [ ] **4.2** Implement weighting & normalization logic - Complexity: Medium
+- [ ] **4.3** Implement confidence calculation with data quality downgrade - Complexity: Medium
+- [ ] **4.4** Provide rationale builder producing three-bullet explanation - Complexity: Low
+- [ ] **4.5** Unit tests covering edge cases & no-data scenarios - Complexity: Medium
+
+**Dependencies:** Task 3
+**Estimated Time:** 14 hours
+**Files to Create/Modify:** `core/sentiment_engine.py`, `tests/test_sentiment_engine.py`
+
+---
+
+## Task 5: Telegram Bot Core (`bot/main.py`) - Complexity: Medium
+**Description:** Implement webhook, command routing, address validation, and response formatting.
+
+### Subtasks:
+- [ ] **5.1** Initialize Telegram Bot API webhook handler with `python-telegram-bot` - Complexity: Low
+- [ ] **5.2** Implement `/help` command with usage instructions - Complexity: Low
+- [ ] **5.3** Implement `/stats` command returning usage metrics - Complexity: Medium
+- [ ] **5.4** Implement contract address validation for EVM & Solana - Complexity: Medium
+- [ ] **5.5** Integrate Sentiment Engine to produce formatted reply (emoji, disclaimer) - Complexity: Medium
+
+**Dependencies:** Tasks 3, 4
+**Estimated Time:** 12 hours
+**Files to Create/Modify:** `bot/main.py`, `core/validation.py`, `tests/test_bot.py`
+
+---
+
+## Task 6: Rate Limiting & Usage Metrics - Complexity: Medium
+**Description:** Enforce 2 analyses per minute per user and track usage statistics.
+
+### Subtasks:
+- [ ] **6.1** Implement Redis rate-limit keys with sliding window algorithm - Complexity: Medium
+- [ ] **6.2** Add graceful error messaging when rate limit exceeded - Complexity: Low
+- [ ] **6.3** Store per-user & global usage counters for `/stats` - Complexity: Low
+
+**Dependencies:** Tasks 2, 5
+**Estimated Time:** 6 hours
+**Files to Create/Modify:** `core/cache.py`, `bot/main.py`, `tests/test_rate_limit.py`
+
+---
+
+## Task 7: Testing Suite & QA Automation - Complexity: Medium
+**Description:** Implement comprehensive unit, integration, and load tests, plus linting.
+
+### Subtasks:
+- [ ] **7.1** Write unit tests for validation utilities and helper functions - Complexity: Low
+- [ ] **7.2** Write integration tests mocking external APIs (Twitter, Nansen, CoinGecko) - Complexity: Medium
+- [ ] **7.3** Configure load testing (Locust/Artillery) for 50 concurrent users - Complexity: Medium
+- [ ] **7.4** Configure coverage reporting in CI - Complexity: Low
+
+**Dependencies:** Tasks 1-6
+**Estimated Time:** 10 hours
+**Files to Create/Modify:** `tests/*`, `.github/workflows/ci.yml`
+
+---
+
+## Task 8: Documentation & Developer Experience - Complexity: Low
+**Description:** Provide user and developer documentation, code comments, and README updates.
+
+### Subtasks:
+- [ ] **8.1** Update `README.md` with setup, usage, and deployment instructions - Complexity: Low
+- [ ] **8.2** Add inline docstrings and comments across modules - Complexity: Low
+- [ ] **8.3** Generate API reference (optional) via Sphinx or MkDocs - Complexity: Low
+
+**Dependencies:** Tasks 1-7
+**Estimated Time:** 4 hours
+**Files to Create/Modify:** `README.md`, `docs/*`
+
+---
+
+## Task 9: Deployment & Monitoring - Complexity: Medium
+**Description:** Deploy production container, set up uptime monitoring, and alerting.
+
+### Subtasks:
+- [ ] **9.1** Deploy container image to AWS Fargate with environment variables - Complexity: Medium
+- [ ] **9.2** Configure health checks and auto-scaling policies - Complexity: Medium
+- [ ] **9.3** Integrate monitoring (CloudWatch or Prometheus) & 99% uptime alerts - Complexity: Medium
+
+**Dependencies:** Tasks 2, 5, 6
+**Estimated Time:** 8 hours
+**Files to Create/Modify:** `infra/terraform/*`, `deploy/*`, `README.md`
+
+---
+
+## Implementation Order
+1. Task 1
+2. Task 2
+3. Task 3
+4. Task 4
+5. Task 5
+6. Task 6
+7. Task 7
+8. Task 8
+9. Task 9
+
+## Total Estimated Time: 78 hours
+
+## Notes
+- Parallelize API calls within Sentiment Engine to meet <7s median response requirement
+- Ensure Redis caching to reduce API costs
+- Weight percentages should be configurable via `config.yaml` for future tuning
+- Include "Not financial advice" disclaimer in every user-visible response
+- Handle missing pillar data by lowering confidence and flagging low data quality
+- Secure API keys via environment variables and AWS Secrets Manager
+description:
+globs:
+alwaysApply: false
+---

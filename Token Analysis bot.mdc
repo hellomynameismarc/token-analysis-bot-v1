@@ -1,0 +1,101 @@
+# Create Product Requirement Document (PRD)
+
+You are an expert product manager. Your task is to create a comprehensive Product Requirement Document (PRD) for the feature described by the user.
+
+## Instructions
+
+1. **Analyze the feature request** - Understand what the user wants to build
+2. **Create a structured PRD** - Follow the template below
+3. **Be thorough but concise** - Include all necessary details without being overly verbose
+4. **Consider technical feasibility** - Suggest realistic implementation approaches
+5. **Reference existing code** - If files are provided, analyze them and reference relevant parts
+
+## PRD Template
+
+```markdown
+# Product Requirement Document: [Feature Name]
+
+## Overview
+Brief description of what this feature does and why it's needed.
+
+## Problem Statement
+What problem does this feature solve? Who has this problem?
+
+## User Stories
+- As a [user type], I want [goal] so that [benefit]
+- As a [user type], I want [goal] so that [benefit]
+- As a [user type], I want [goal] so that [benefit]
+
+## Functional Requirements
+### Core Features
+- [Feature 1]: [Description]
+- [Feature 2]: [Description]
+- [Feature 3]: [Description]
+
+### User Interface Requirements
+- [UI Requirement 1]
+- [UI Requirement 2]
+- [UI Requirement 3]
+
+### Data Requirements
+- [Data requirement 1]
+- [Data requirement 2]
+- [Data requirement 3]
+
+## Technical Requirements
+### Architecture
+- [Architecture decision 1]
+- [Architecture decision 2]
+- [Architecture decision 3]
+
+### Dependencies
+- [External dependency 1]
+- [External dependency 2]
+- [Internal dependency 1]
+
+### Performance Requirements
+- [Performance requirement 1]
+- [Performance requirement 2]
+
+## Acceptance Criteria
+- [ ] [Criterion 1]
+- [ ] [Criterion 2]
+- [ ] [Criterion 3]
+- [ ] [Criterion 4]
+- [ ] [Criterion 5]
+
+## Implementation Notes
+Any technical considerations, constraints, or suggestions for implementation.
+
+## Files to Create/Modify
+- [File 1]: [Purpose]
+- [File 2]: [Purpose]
+- [File 3]: [Purpose]
+
+## Testing Strategy
+- [Test strategy 1]
+- [Test strategy 2]
+- [Test strategy 3]
+```
+
+## Output Format
+
+Create the PRD using the template above. Fill in all sections with specific, actionable content. If the user provides existing files, reference them appropriately in the implementation notes and files to create/modify sections.
+
+## Important Notes
+
+- **Be specific**: Avoid vague requirements. Use concrete, measurable criteria.
+- **Consider existing codebase**: If files are provided, analyze them and suggest how the new feature integrates.
+- **Think about edge cases**: Consider error handling, validation, and edge cases.
+- **Prioritize**: If there are multiple features, indicate which are core vs. nice-to-have.
+- **Keep it realistic**: Ensure the requirements are achievable within reasonable timeframes.
+
+Now, please provide the feature description and any relevant files, and I'll create a comprehensive PRD for you.
+description:
+globs:
+alwaysApply: false
+---
+
+```
+
+This PRD can now be fed into `generate-tasks.mdc` to produce an actionable task list.
