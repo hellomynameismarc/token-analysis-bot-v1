@@ -36,17 +36,22 @@ railway variables set COINGECKO_API_KEY=your_coingecko_key
 railway variables set USE_REDIS=false
 ```
 
-5. **Deploy**
+5. **Configure sentiment weights (optional)**
+   - The bot uses `config.yaml` for sentiment weighting
+   - Default: 80% onchain, 5% social, 15% fundamentals
+   - You can customize this by editing `config.yaml` in your repository
+
+6. **Deploy**
 ```bash
 railway up
 ```
 
-6. **Get your webhook URL**
+7. **Get your webhook URL**
 ```bash
 railway domain
 ```
 
-7. **Set webhook in Telegram**
+8. **Set webhook in Telegram**
 ```bash
 curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
      -H "Content-Type: application/json" \
@@ -79,7 +84,12 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
    - `COINGECKO_API_KEY`
    - `USE_REDIS=false`
 
-4. **Deploy**
+4. **Configure sentiment weights (optional)**
+   - The bot uses `config.yaml` for sentiment weighting
+   - Default: 80% onchain, 5% social, 15% fundamentals
+   - You can customize this by editing `config.yaml` in your repository
+
+5. **Deploy**
    - Click "Create Web Service"
    - Render will automatically deploy from your GitHub repo
 
@@ -105,7 +115,11 @@ export COINGECKO_API_KEY=your_coingecko_key
 export USE_REDIS=false
 ```
 
-3. **Run in polling mode**
+3. **Configure sentiment weights (optional)**
+   - Edit `config.yaml` to customize sentiment weighting
+   - Default: 80% onchain, 5% social, 15% fundamentals
+
+4. **Run in polling mode**
 ```bash
 python -m bot.main
 ```
@@ -129,6 +143,33 @@ python -m bot.main
 
 ## 🔧 Environment Configuration
 
+### Configuration Files
+
+The bot uses `config.yaml` for customizable parameters:
+
+```yaml
+# Sentiment Analysis Weighting (must sum to 1.0)
+weights:
+  onchain: 0.80      # Nansen smart money flows (80%)
+  social: 0.05       # Twitter sentiment (5%)
+  fundamentals: 0.15 # Token fundamentals (15%)
+
+# Signal Classification Thresholds
+thresholds:
+  bullish: 0.2       # Score > 0.2 = Bullish
+  bearish: -0.2      # Score < -0.2 = Bearish
+
+# Rate Limiting Configuration
+rate_limiting:
+  window_seconds: 60        # Rate limit window
+  max_requests: 2           # Max requests per window per user
+```
+
+**To customize:**
+1. Edit `config.yaml` in your repository
+2. Redeploy your application
+3. The bot will automatically load the new configuration
+
 ### Required Environment Variables
 
 ```bash
@@ -146,6 +187,11 @@ REDIS_URL=redis://localhost:6379
 
 # Optional: Webhook URL (for production)
 WEBHOOK_URL=https://your-domain.com/webhook
+
+# Optional: Monitoring (Sentry)
+SENTRY_DSN=https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+ENVIRONMENT=production
+VERSION=1.0.0
 ```
 
 ### Getting API Keys
@@ -253,6 +299,55 @@ python -m pytest tests/ -v
 ```
 
 ## 📈 Monitoring & Analytics
+
+### Health Check Endpoints
+
+The bot provides several health check endpoints for monitoring:
+
+- **`/health`** - Basic health check (returns OK/UNHEALTHY)
+- **`/ready`** - Readiness check (returns READY/NOT_READY)
+- **`/metrics`** - Detailed metrics and system information
+- **`/`** - Root endpoint with service information
+
+### Setting Up Uptime Monitoring
+
+#### Option 1: Automated Setup
+
+Use our monitoring setup script:
+
+```bash
+# Basic setup (shows manual instructions)
+python monitoring/setup_monitoring.py your-domain.railway.app
+
+# Automated setup with UptimeRobot
+python monitoring/setup_monitoring.py your-domain.railway.app --uptimerobot-api-key YOUR_KEY
+```
+
+#### Option 2: Manual Setup
+
+**UptimeRobot (Recommended - Free):**
+1. Go to [uptimerobot.com](https://uptimerobot.com)
+2. Sign up for a free account
+3. Create a new monitor:
+   - URL: `https://your-domain.railway.app/health`
+   - Type: HTTP(s)
+   - Interval: 5 minutes
+   - Expected response: `OK`
+
+**Pingdom (Free):**
+1. Go to [pingdom.com](https://www.pingdom.com)
+2. Sign up for a free account
+3. Create a new HTTP check:
+   - URL: `https://your-domain.railway.app/health`
+   - Interval: 1 minute
+
+**StatusCake (Free):**
+1. Go to [statuscake.com](https://www.statuscake.com)
+2. Sign up for a free account
+3. Create a new test:
+   - URL: `https://your-domain.railway.app/health`
+   - Test type: HTTP
+   - Check rate: 5 minutes
 
 ### Built-in Statistics
 

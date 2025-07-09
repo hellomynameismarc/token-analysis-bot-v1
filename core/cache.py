@@ -231,6 +231,18 @@ def get_cache() -> HybridCache:
     return _cache
 
 
+def get_cache_status() -> str:
+    """Get current cache status for health checks."""
+    try:
+        cache = get_cache()
+        if cache._use_redis and cache._redis_cache:
+            return "redis"
+        else:
+            return "memory"
+    except Exception:
+        return "unknown"
+
+
 async def cached_request(
     namespace: str,
     params: dict,

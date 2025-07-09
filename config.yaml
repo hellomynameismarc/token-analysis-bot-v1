@@ -1,0 +1,41 @@
+# Token Sentiment Bot Configuration
+# This file allows you to customize the sentiment analysis weighting and parameters
+
+# Sentiment Analysis Weighting (must sum to 1.0)
+weights:
+  onchain: 0.80      # Nansen smart money flows (80%)
+  social: 0.05       # Twitter sentiment (5%)
+  fundamentals: 0.15 # Token fundamentals (15%)
+
+# Signal Classification Thresholds
+thresholds:
+  bullish: 0.2       # Score > 0.2 = Bullish
+  bearish: -0.2      # Score < -0.2 = Bearish
+
+# Data Quality Thresholds
+data_quality:
+  twitter:
+    min_tweets_good: 30    # Excellent quality threshold
+    min_tweets_fair: 10    # Good quality threshold
+  nansen:
+    min_volume_high: 10000.0    # High activity threshold (USD)
+    min_volume_medium: 1000.0   # Moderate activity threshold (USD)
+  fundamentals:
+    min_large_cap: 100000000    # Large cap threshold (USD)
+    min_mid_cap: 1000000        # Mid cap threshold (USD)
+
+# Rate Limiting Configuration
+rate_limiting:
+  window_seconds: 60        # Rate limit window
+  max_requests: 2           # Max requests per window per user
+
+# Cache Configuration
+cache:
+  ttl_seconds: 300          # Cache TTL (5 minutes)
+  use_redis: false          # Set to true for Redis, false for in-memory
+
+# API Configuration
+api:
+  timeout_seconds: 30       # API request timeout
+  max_retries: 3           # Max retry attempts
+  retry_delay_seconds: 1   # Base retry delay 

@@ -31,6 +31,8 @@ from telegram.constants import ParseMode
 from core.sentiment_engine import SentimentEngine, SentimentSignal
 from core.validation import validate_token_address, AddressType
 from core.rate_limiter import check_rate_limit, record_request, get_user_rate_limit_stats, get_global_rate_limit_stats
+from core.monitoring import init_monitoring, capture_exception, set_user_context, clear_user_context, add_breadcrumb
+from bot.web_server import create_web_server
 
 
 # Configure logging
@@ -82,6 +84,9 @@ class TokenSentimentBot:
         
     async def initialize(self):
         """Initialize the bot application and set up handlers."""
+        # Initialize monitoring
+        init_monitoring()
+        
         # Create application
         self.application = Application.builder().token(self.token).build()
         
@@ -342,7 +347,18 @@ class TokenSentimentBot:
             return
             
         user_id = update.effective_user.id
+        username = update.effective_user.username
         message_text = update.message.text.strip()
+        
+        # Set user context for error tracking
+        set_user_context(user_id, username)
+        
+        # Add breadcrumb for request tracking
+        add_breadcrumb(
+            message=f"Processing message from user {user_id}",
+            category="bot.request",
+            data={"user_id": user_id, "message_length": len(message_text)}
+        )
         
         # Check rate limiting using new rate limiter
         is_allowed, rate_limit_info = check_rate_limit(user_id)
@@ -428,6 +444,16 @@ class TokenSentimentBot:
         except Exception as e:
             logger.error(f"Error analyzing token {address}: {e}")
             
+            # Capture exception for monitoring
+            capture_exception(
+                context={
+                    "user_id": user_id,
+                    "address": address,
+                    "address_type": address_type.value,
+                    "chain_id": chain_id
+                }
+            )
+            
             # Record error for statistics
             bot_stats["total_errors"] += 1
             
@@ -438,6 +464,9 @@ class TokenSentimentBot:
                 error_message,
                 parse_mode=ParseMode.MARKDOWN
             )
+        finally:
+            # Clear user context
+            clear_user_context()
     
     def _check_rate_limit(self, user_id: int) -> bool:
         """Check if user is within rate limits."""
@@ -689,11 +718,8 @@ async def create_application():
     if not BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
     
-    if not WEBHOOK_URL:
-        raise ValueError("WEBHOOK_URL environment variable not set")
-    
     # Create bot instance
-    bot = TokenSentimentBot(BOT_TOKEN, WEBHOOK_URL)
+    bot = TokenSentimentBot(BOT_TOKEN, WEBHOOK_URL or "")
     await bot.initialize()
     
     return bot
@@ -708,16 +734,40 @@ async def main():
         # Create and start bot
         bot = await create_application()
         
-        if WEBHOOK_URL:
-            # Webhook mode for production
-            logger.info("Starting in webhook mode...")
-            await bot.start_webhook()
-        else:
+        if WEBHOOK_URL and bot.application:
+            # Webhook mode for production with health checks
+            logger.info("Starting in webhook mode with health checks...")
+            
+            # Create custom web server with health checks
+            web_server = await create_web_server(bot.application, WEBHOOK_PATH)
+            
+            # Set webhook URL
+            await bot.application.bot.set_webhook(
+                url=f"{WEBHOOK_URL}{WEBHOOK_PATH}",
+                allowed_updates=['message', 'callback_query']
+            )
+            
+            # Start web server
+            await web_server.start(port=WEBHOOK_PORT)
+            
+            # Keep the server running
+            try:
+                await asyncio.Future()  # Run forever
+            except KeyboardInterrupt:
+                logger.info("Shutting down...")
+            finally:
+                await web_server.stop()
+                if bot:
+                    await bot.stop()
+        elif bot.application:
             # Polling mode for development
             logger.info("Starting in polling mode...")
             await bot.application.run_polling(
                 allowed_updates=['message', 'callback_query']
             )
+        else:
+            logger.error("Failed to initialize bot application")
+            return
             
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
@@ -725,7 +775,7 @@ async def main():
         logger.error(f"Bot error: {e}")
         raise
     finally:
-        if 'bot' in locals():
+        if 'bot' in locals() and bot:
             await bot.stop()
 
 

@@ -41,6 +41,7 @@ The Token Sentiment Bot analyzes cryptocurrency tokens and provides **Bullish/Ne
 - **Per-user tracking** and rate limit management
 - **Performance metrics** and system health monitoring
 - **Network breakdown** and sentiment distribution
+- **Health check endpoints** for uptime monitoring
 
 ## 📋 Project Status
 
@@ -183,6 +184,33 @@ Token Sentiment Bot/
 
 ## 🔧 Configuration
 
+### Configuration Files
+
+The bot uses `config.yaml` for customizable parameters:
+
+```yaml
+# Sentiment Analysis Weighting (must sum to 1.0)
+weights:
+  onchain: 0.80      # Nansen smart money flows (80%)
+  social: 0.05       # Twitter sentiment (5%)
+  fundamentals: 0.15 # Token fundamentals (15%)
+
+# Signal Classification Thresholds
+thresholds:
+  bullish: 0.2       # Score > 0.2 = Bullish
+  bearish: -0.2      # Score < -0.2 = Bearish
+
+# Rate Limiting Configuration
+rate_limiting:
+  window_seconds: 60        # Rate limit window
+  max_requests: 2           # Max requests per window per user
+```
+
+**To customize:**
+1. Edit `config.yaml` in your repository
+2. Redeploy your application
+3. The bot will automatically load the new configuration
+
 ### Environment Variables
 
 ```bash
@@ -198,6 +226,11 @@ COINGECKO_API_KEY=your_coingecko_key
 # Optional: Redis (for production scaling)
 REDIS_URL=redis://localhost:6379
 USE_REDIS=true  # Set to false for in-memory only
+
+# Optional: Monitoring (Sentry)
+SENTRY_DSN=https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+ENVIRONMENT=production
+VERSION=1.0.0
 ```
 
 ### Analysis Weights
@@ -232,9 +265,31 @@ python -m pytest tests/ --cov=core --cov=bot --cov-report=html
 locust -f locustfile.py --headless -u 50 -r 10 -H http://localhost:8000
 ```
 
-## 🚀 Deployment Options
+## 🚀 Deployment
 
-### 🆓 **Free MVP Options**
+### Quick Deployment
+
+Use our automated deployment script:
+
+```bash
+# Make script executable
+chmod +x deploy.sh
+
+# Set environment variables
+export TELEGRAM_BOT_TOKEN=your_bot_token
+export NANSEN_API_KEY=your_nansen_key
+export TWITTER_BEARER_TOKEN=your_twitter_token
+export COINGECKO_API_KEY=your_coingecko_key
+
+# Run deployment script
+./deploy.sh
+```
+
+The script will guide you through deploying to Railway or Render.
+
+### Deployment Options
+
+#### 🆓 **Free MVP Options**
 
 #### Option 1: Local Development (Free)
 ```bash
@@ -316,6 +371,43 @@ else:
 - **Error Rate**: <1% target
 - **Test Coverage**: 77% overall (150+ tests)
 - **Load Testing**: Configured for 50 concurrent users
+
+## 🔍 Monitoring & Health Checks
+
+### Health Check Endpoints
+
+The bot provides comprehensive health monitoring:
+
+- **`/health`** - Basic health status (OK/UNHEALTHY)
+- **`/ready`** - Service readiness (READY/NOT_READY)
+- **`/metrics`** - Detailed system metrics
+- **`/`** - Service information
+
+### Setting Up Monitoring
+
+#### Quick Setup
+
+```bash
+# Generate monitoring configuration
+python monitoring/setup_monitoring.py your-domain.railway.app
+
+# Automated setup with UptimeRobot
+python monitoring/setup_monitoring.py your-domain.railway.app --uptimerobot-api-key YOUR_KEY
+```
+
+#### Manual Setup
+
+1. **Choose a monitoring service**:
+   - [UptimeRobot](https://uptimerobot.com) (Recommended - Free)
+   - [Pingdom](https://www.pingdom.com) (Free tier)
+   - [StatusCake](https://www.statuscake.com) (Free tier)
+
+2. **Configure the health check**:
+   - URL: `https://your-domain.railway.app/health`
+   - Expected response: `OK`
+   - Check interval: 5 minutes
+
+3. **Set up alerts** for downtime notifications
 
 ## 🔒 Security & Compliance
 

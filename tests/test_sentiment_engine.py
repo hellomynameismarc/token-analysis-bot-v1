@@ -123,8 +123,8 @@ class TestSentimentEngine:
             twitter_data, nansen_data, fundamentals_data
         )
         
-        # Expected: 0.25*0.8 + 0.60*0.6 + 0.15*0.5 = 0.2 + 0.36 + 0.075 = 0.635
-        assert abs(score - 0.635) < 0.01
+        # Expected: 0.05*0.8 + 0.80*0.6 + 0.15*0.5 = 0.04 + 0.48 + 0.075 = 0.595
+        assert abs(score - 0.595) < 0.01
     
     def test_confidence_calculation(self):
         """Test confidence calculation based on data availability and quality."""
@@ -209,8 +209,8 @@ class TestSentimentEngine:
         single_pillar_confidence = engine._compute_confidence(
             TwitterPillarData(sentiment_score=0.8, tweet_count=40), None, None
         )
-        # Should be proportional to the weight of that pillar (0.25 for twitter)
-        assert 0.2 < single_pillar_confidence < 0.3
+        # Should be proportional to the weight of that pillar (0.05 for twitter)
+        assert 0.04 < single_pillar_confidence < 0.06
         
         # Zero quality data (should not contribute to confidence)
         zero_quality_twitter = TwitterPillarData(sentiment_score=0.0, tweet_count=0)  # quality=0.0
@@ -229,13 +229,13 @@ class TestSentimentEngine:
             zero_quality_nansen, None
         )
         # Should only consider the good pillar
-        assert 0.2 < mixed_zero_confidence < 0.3
+        assert 0.04 < mixed_zero_confidence < 0.06
 
     def test_confidence_proportional_to_coverage(self):
         """Test that confidence properly reflects data coverage and quality."""
         engine = SentimentEngine()
         
-        # Perfect data for most important pillar (Nansen - 60% weight)
+        # Perfect data for most important pillar (Nansen - 80% weight)
         nansen_only = engine._compute_confidence(
             None,
             NansenPillarData(netflow_score=0.5, inflow_usd=25000, outflow_usd=10000),
@@ -255,20 +255,20 @@ class TestSentimentEngine:
         
         # Coverage with 2 most important pillars vs 2 least important
         major_pillars = engine._compute_confidence(
-            TwitterPillarData(sentiment_score=0.4, tweet_count=30),  # 25% weight
-            NansenPillarData(netflow_score=0.3, inflow_usd=15000, outflow_usd=8000),  # 60% weight
+            TwitterPillarData(sentiment_score=0.4, tweet_count=30),  # 5% weight
+            NansenPillarData(netflow_score=0.3, inflow_usd=15000, outflow_usd=8000),  # 80% weight
             None
         )
         
         minor_pillars = engine._compute_confidence(
-            TwitterPillarData(sentiment_score=0.4, tweet_count=30),  # 25% weight
+            TwitterPillarData(sentiment_score=0.4, tweet_count=30),  # 5% weight
             None,
             FundamentalsPillarData(
                 market_cap_usd=100_000_000, volume_24h_usd=5_000_000, price_usd=2.0
             )  # 15% weight
         )
         
-        # Major pillars (85% weight) should give higher confidence than minor (40% weight)
+        # Major pillars (85% weight) should give higher confidence than minor (20% weight)
         assert major_pillars > minor_pillars
     
     def test_rationale_generation(self):
@@ -495,7 +495,7 @@ class TestEdgeCases:
             netflow_score=-0.4, inflow_usd=2000, outflow_usd=8000
         )
         score = engine._compute_weighted_score(None, nansen_data, None)
-        assert score == -0.4  # Should equal the Nansen score
+        assert abs(score - (-0.4)) < 0.01  # Should equal the Nansen score (normalized)
 
 
 class TestEdgeCasesAndNoDataScenarios:
@@ -589,9 +589,9 @@ class TestEdgeCasesAndNoDataScenarios:
         confidence = engine._compute_confidence(high_twitter, low_nansen, None)
         
         # Score should be weighted by quality
-        expected_twitter_contrib = 0.7 * 0.25 * 1.0  # score * weight * quality
-        expected_nansen_contrib = 0.2 * 0.60 * 0.4   # score * weight * quality
-        total_weight = 0.25 * 1.0 + 0.60 * 0.4
+        expected_twitter_contrib = 0.7 * 0.05 * 1.0  # score * weight * quality
+        expected_nansen_contrib = 0.2 * 0.80 * 0.4   # score * weight * quality
+        total_weight = 0.05 * 1.0 + 0.80 * 0.4
         expected_score = (expected_twitter_contrib + expected_nansen_contrib) / total_weight
         
         assert abs(score - expected_score) < 0.01
@@ -629,8 +629,8 @@ class TestEdgeCasesAndNoDataScenarios:
         confidence = engine._compute_confidence(twitter_only, None, None)
         rationale = engine._generate_rationale(twitter_only, None, None, score)
         
-        assert score == 0.8  # Should equal input score
-        assert confidence == 0.25  # Should equal Twitter weight (25%)
+        assert abs(score - 0.8) < 0.01  # Should equal the Twitter score (normalized)
+        assert confidence == 0.05  # Should equal Twitter weight (5%)
         assert "Very positive community sentiment" in rationale[1]
         assert "Insufficient smart money data" in rationale[0]
         assert "Missing or insufficient market data" in rationale[2]
@@ -640,8 +640,8 @@ class TestEdgeCasesAndNoDataScenarios:
         score = engine._compute_weighted_score(None, nansen_only, None)
         confidence = engine._compute_confidence(None, nansen_only, None)
         
-        assert score == -0.6  # Should equal input score
-        assert confidence == 0.60  # Should equal Nansen weight (60%)
+        assert abs(score - (-0.6)) < 0.01  # Should equal the Nansen score (normalized)
+        assert confidence == 0.80  # Should equal Nansen weight (80%)
     
     def test_weighted_score_edge_cases(self):
         """Test weighted score calculation edge cases."""

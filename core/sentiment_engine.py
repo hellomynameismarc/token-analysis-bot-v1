@@ -14,6 +14,7 @@ import asyncio
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+import yaml
 
 from pydantic import BaseModel, Field, validator
 
@@ -215,9 +216,23 @@ class SentimentAnalysisResult(BaseModel):
 @dataclass
 class WeightingConfig:
     """Configuration for pillar weighting in sentiment analysis."""
-    nansen_weight: float = 0.60      # 60% - on-chain smart money flows
-    twitter_weight: float = 0.25     # 25% - social sentiment  
+    nansen_weight: float = 0.80      # 80% - on-chain smart money flows
+    twitter_weight: float = 0.05     # 5% - social sentiment  
     fundamentals_weight: float = 0.15  # 15% - token fundamentals
+    
+    @staticmethod
+    def from_yaml(path: str = "config.yaml"):
+        try:
+            with open(path, "r") as f:
+                config = yaml.safe_load(f)
+            weights = config.get("weights", {})
+            return WeightingConfig(
+                nansen_weight=weights.get("onchain", 0.80),
+                twitter_weight=weights.get("social", 0.05),
+                fundamentals_weight=weights.get("fundamentals", 0.15),
+            )
+        except Exception:
+            return WeightingConfig()
     
     def __post_init__(self):
         """Validate weights sum to 1.0."""
@@ -265,7 +280,8 @@ class SentimentEngine:
         self.twitter_client = twitter_client
         self.nansen_client = nansen_client
         self.cmc_client = cmc_client
-        self.weights = weighting_config or WeightingConfig()
+        # Load weights from config.yaml if present, else use default
+        self.weights = weighting_config or WeightingConfig.from_yaml()
         self.norms = normalization_config or NormalizationConfig()
     
     async def analyze_token(self, 
@@ -295,9 +311,9 @@ class SentimentEngine:
         )
         
         # Handle exceptions gracefully - ensure proper types
-        twitter_result = twitter_data if not isinstance(twitter_data, Exception) else None
-        nansen_result = nansen_data if not isinstance(nansen_data, Exception) else None  
-        fundamentals_result = fundamentals_data if not isinstance(fundamentals_data, Exception) else None
+        twitter_result = twitter_data if isinstance(twitter_data, (TwitterPillarData, type(None))) else None
+        nansen_result = nansen_data if isinstance(nansen_data, (NansenPillarData, type(None))) else None  
+        fundamentals_result = fundamentals_data if isinstance(fundamentals_data, (FundamentalsPillarData, type(None))) else None
             
         # Compute weighted score and confidence
         overall_score = self._compute_weighted_score(
