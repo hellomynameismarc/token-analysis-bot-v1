@@ -4,7 +4,7 @@
 **Description:** Establish the foundational project structure, dependency management, and development environment.
 
 ### Subtasks:
-- [ ] **1.1** Create Python virtual environment & initialize Git repository - Complexity: Low
+- [x] **1.1** Create Python virtual environment & initialize Git repository ✅ - Complexity: Low
 - [ ] **1.2** Define project directory layout (`bot/`, `core/`, `tests/`) - Complexity: Low
 - [ ] **1.3** Create `requirements.txt` with pinned dependencies (`python-telegram-bot`, `httpx`, `redis`, `pydantic`, `pytest`, `flake8`, etc.) - Complexity: Low
 - [ ] **1.4** Configure pre-commit hooks (black, flake8) - Complexity: Low
