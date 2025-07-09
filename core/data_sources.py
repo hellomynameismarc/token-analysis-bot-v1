@@ -1,7 +1,7 @@
 import os
 import asyncio
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import httpx
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -113,14 +113,20 @@ class NansenAPIError(Exception):
 
 
 class NansenClient:
-    """Asynchronous wrapper around the Nansen API for smart-money netflow data."""
+    """Async wrapper around the Nansen v1 API.
 
-    _BASE_URL = "https://api.nansen.ai/external/v1"
+    Currently used for Smart-Money net flows.
+    Docs: https://docs.nansen.ai/ › API › Smart Money › Flows
+    """
+
+    _BASE_URL = "https://api.nansen.ai/v1"
 
     def __init__(self, api_key: Optional[str] = None, *, timeout: float = 10.0):
         self.api_key = api_key or os.getenv("NANSEN_API_KEY")
         if not self.api_key:
-            raise ValueError("Nansen API key not provided via arg or NANSEN_API_KEY env var.")
+            raise ValueError(
+                "Nansen API key not provided via arg or NANSEN_API_KEY env var."
+            )
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers={"x-api-key": self.api_key},
@@ -130,10 +136,27 @@ class NansenClient:
         await self._client.aclose()
 
     # --------------------------- Nansen API ---------------------------
-    async def smart_money_netflow(self, token_address: str, *, window: str = "24h") -> Dict[str, float]:
-        """Return dict with inflow & outflow USD values for `token_address` over `window`."""
-        url = f"{self._BASE_URL}/token/{token_address}/smart-money-netflow"
-        params = {"time_window": window}
+    async def smart_money_netflow(
+        self,
+        token_address: str,
+        *,
+        chain_id: int = 1,
+        window: str = "24h",
+    ) -> Dict[str, float]:
+        """Fetch smart-money inflow/outflow data.
+
+        Parameters
+        ----------
+        token_address : str  Contract address (checksum or lowercase).
+        chain_id      : int  EVM chain id (1 = Ethereum, 56 = BSC…). Defaults to 1.
+        window        : str  1h | 6h | 24h | 7d. Defaults to 24h.
+        """
+        url = f"{self._BASE_URL}/smart-money/flows"
+        params = {
+            "address": token_address,
+            "chain_id": chain_id,
+            "window": window,
+        }
         r = await self._client.get(url, params=params)
         if r.status_code != 200:
             raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
@@ -141,30 +164,114 @@ class NansenClient:
         return {
             "inflow_usd": float(data.get("inflow_usd", 0)),
             "outflow_usd": float(data.get("outflow_usd", 0)),
+            "netflow_usd": float(data.get("netflow_usd", data.get("inflow_usd", 0) - data.get("outflow_usd", 0))),
         }
 
-    async def netflow_score(self, token_address: str, *, window: str = "24h") -> Dict[str, float]:
+    async def netflow_score(
+        self, token_address: str, *, chain_id: int = 1, window: str = "24h"
+    ) -> Dict[str, float]:
         """Compute normalized netflow score in range [-1, 1].
 
         score = (inflow - outflow) / (inflow + outflow)
         Returns dict with score and raw flows.
         """
-        flows = await self.smart_money_netflow(token_address, window=window)
+        flows = await self.smart_money_netflow(
+            token_address, chain_id=chain_id, window=window
+        )
         inflow = flows["inflow_usd"]
         outflow = flows["outflow_usd"]
+        netflow = flows["netflow_usd"]
         denom = inflow + outflow or 1.0
-        score = (inflow - outflow) / denom
+        score = netflow / denom
         return {
             "score": round(score, 3),
             "inflow_usd": inflow,
             "outflow_usd": outflow,
         }
 
+    # ----------------------- Token God Mode - Holders ----------------------
+    async def holder_count(self, token_address: str, *, chain_id: int = 1) -> int:
+        """Return total number of holders for a token.
 
-async def get_nansen_netflow_score(token_address: str, api_key: Optional[str] = None) -> Dict[str, float]:
+        Docs path: /v1/token/holders
+        Example response: {"address": "0x...", "chain_id": 1, "holder_count": 12345}
+        """
+        url = f"{self._BASE_URL}/token/holders"
+        params = {"address": token_address, "chain_id": chain_id}
+        r = await self._client.get(url, params=params)
+        if r.status_code != 200:
+            raise NansenAPIError(f"Nansen API {r.status_code}: {r.text}")
+        data = r.json()
+        return int(data.get("holder_count", 0))
+
+
+async def get_nansen_netflow_score(
+    token_address: str, *, chain_id: int = 1, api_key: Optional[str] = None
+) -> Dict[str, float]:
     """Convenience helper for one-shot netflow score fetch."""
     client = NansenClient(api_key)
     try:
-        return await client.netflow_score(token_address)
+        return await client.netflow_score(token_address, chain_id=chain_id)
+    finally:
+        await client.close()
+
+
+async def get_token_holder_count(token_address: str, *, chain_id: int = 1, api_key: Optional[str] = None) -> int:
+    """Convenience helper to fetch holder count via Nansen Token God Mode."""
+    client = NansenClient(api_key)
+    try:
+        return await client.holder_count(token_address, chain_id=chain_id)
+    finally:
+        await client.close()
+
+
+# ============================= COINMARKETCAP =============================
+class CoinMarketCapAPIError(Exception):
+    """Raised when CoinMarketCap API responds with error."""
+
+
+class CoinMarketCapClient:
+    """Simple async wrapper for CoinMarketCap quotes endpoint.
+
+    Docs: https://coinmarketcap.com/api/documentation/v1/#operation/getV1CryptocurrencyQuotesLatest
+    """
+
+    _BASE_URL = "https://pro-api.coinmarketcap.com/v1"
+
+    def __init__(self, api_key: Optional[str] = None, *, timeout: float = 10.0):
+        self.api_key = api_key or os.getenv("CMC_API_KEY")
+        if not self.api_key:
+            raise ValueError("CMC API key not provided via arg or CMC_API_KEY env var.")
+        self._client = httpx.AsyncClient(
+            timeout=timeout,
+            headers={"X-CMC_PRO_API_KEY": self.api_key},
+        )
+
+    async def close(self) -> None:
+        await self._client.aclose()
+
+    async def token_quote(self, symbol: str) -> Dict[str, float]:
+        """Return market-cap, 24h volume (USD), and price for a token symbol."""
+        url = f"{self._BASE_URL}/cryptocurrency/quotes/latest"
+        params = {"symbol": symbol.upper(), "convert": "USD"}
+        r = await self._client.get(url, params=params)
+        if r.status_code != 200:
+            raise CoinMarketCapAPIError(f"CMC {r.status_code}: {r.text}")
+        data = r.json()
+        info = data["data"].get(symbol.upper())
+        if not info:
+            raise CoinMarketCapAPIError("Symbol not found in CMC response")
+        quote = info["quote"]["USD"]
+        return {
+            "market_cap_usd": float(quote.get("market_cap", 0)),
+            "volume_24h_usd": float(quote.get("volume_24h", 0)),
+            "price_usd": float(quote.get("price", 0)),
+        }
+
+
+async def get_cmc_metadata(symbol: str, api_key: Optional[str] = None) -> Dict[str, float]:
+    client = CoinMarketCapClient(api_key)
+    try:
+        return await client.token_quote(symbol)
     finally:
         await client.close()
