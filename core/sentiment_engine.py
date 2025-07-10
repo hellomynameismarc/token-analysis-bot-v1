@@ -227,8 +227,8 @@ class WeightingConfig:
                 config = yaml.safe_load(f)
             weights = config.get("weights", {})
             return WeightingConfig(
-                nansen_weight=weights.get("onchain", 0.80),
-                twitter_weight=weights.get("social", 0.05),
+                nansen_weight=weights.get("onchain", 0.60),
+                twitter_weight=weights.get("social", 0.25),
                 fundamentals_weight=weights.get("fundamentals", 0.15),
             )
         except Exception:
