@@ -3,8 +3,8 @@
 
 # Sentiment Analysis Weighting (must sum to 1.0)
 weights:
-  onchain: 0.60      # Nansen smart money flows (60%)
-  social: 0.25       # Twitter sentiment (25%)
+  onchain: 0.80      # Nansen smart money flows (80%)
+  social: 0.05       # Twitter sentiment (5%)
   fundamentals: 0.15 # Token fundamentals (15%)
 
 # Signal Classification Thresholds

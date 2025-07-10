@@ -216,8 +216,8 @@ class SentimentAnalysisResult(BaseModel):
 @dataclass
 class WeightingConfig:
     """Configuration for pillar weighting in sentiment analysis."""
-    nansen_weight: float = 0.60      # 60% - on-chain smart money flows
-    twitter_weight: float = 0.25     # 25% - social sentiment  
+    nansen_weight: float = 0.80      # 80% - on-chain smart money flows
+    twitter_weight: float = 0.05     # 5% - social sentiment  
     fundamentals_weight: float = 0.15  # 15% - token fundamentals
     
     @staticmethod
@@ -227,8 +227,8 @@ class WeightingConfig:
                 config = yaml.safe_load(f)
             weights = config.get("weights", {})
             return WeightingConfig(
-                nansen_weight=weights.get("onchain", 0.60),
-                twitter_weight=weights.get("social", 0.25),
+                nansen_weight=weights.get("onchain", 0.80),
+                twitter_weight=weights.get("social", 0.05),
                 fundamentals_weight=weights.get("fundamentals", 0.15),
             )
         except Exception:

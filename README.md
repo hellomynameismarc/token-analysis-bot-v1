@@ -28,7 +28,7 @@ A Telegram bot that analyzes token sentiment using onchain data, social signals,
 ## 📊 Features
 
 - **Multi-chain support**: Ethereum, Base, Solana
-- **Smart sentiment analysis**: 60% onchain + 25% social + 15% fundamentals
+- **Smart sentiment analysis**: 80% onchain + 5% social + 15% fundamentals
 - **Real-time data**: Nansen, Twitter, CoinMarketCap integration
 - **Rate limiting**: 2 analyses per minute per user
 - **Confidence scoring**: 0-100% based on data quality
