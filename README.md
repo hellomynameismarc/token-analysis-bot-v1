@@ -2,9 +2,9 @@
 
 A Telegram bot that analyzes token sentiment using onchain data, social signals, and fundamentals.
 
-## 🚀 Quick Start
+## �� Quick Start
 
-1. **Clone and setup:**
+1. **Setup:**
    ```bash
    git clone <your-repo>
    cd "Token Sentiment v1"
@@ -19,7 +19,7 @@ A Telegram bot that analyzes token sentiment using onchain data, social signals,
    # Edit .env with your API keys
    ```
 
-3. **Run the bot:**
+3. **Run:**
    ```bash
    ./start_bot.sh
    # Or: python run_bot.py
@@ -27,7 +27,7 @@ A Telegram bot that analyzes token sentiment using onchain data, social signals,
 
 ## 📊 Features
 
-- **Multi-chain support**: Ethereum, Base, and Solana
+- **Multi-chain support**: Ethereum, Base, Solana
 - **Smart sentiment analysis**: 60% onchain + 25% social + 15% fundamentals
 - **Real-time data**: Nansen, Twitter, CoinMarketCap integration
 - **Rate limiting**: 2 analyses per minute per user
